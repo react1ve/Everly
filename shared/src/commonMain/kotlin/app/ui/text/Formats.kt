@@ -7,6 +7,8 @@ import app.core.schedule.Cell
 import app.core.schedule.CellState
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import app.core.model.ReminderSettings
 import kotlinx.datetime.daysUntil
 
 /**
@@ -20,6 +22,24 @@ object Formats {
 
     fun monthLong(date: LocalDate) = monthsLong[date.month.ordinal]
     fun shortDate(date: LocalDate) = "${monthsShort[date.month.ordinal]} ${date.day}"
+
+    fun weekdayDate(date: LocalDate) = "${weekdayShort(date.dayOfWeek)}, ${shortDate(date)}"
+    fun longDate(date: LocalDate) =
+        "${weekdayLong(date.dayOfWeek)}, ${monthsLong[date.month.ordinal]} ${date.day}, ${date.year}"
+    fun weekdayLong(day: DayOfWeek) = day.name.lowercase().replaceFirstChar { it.uppercase() }
+
+    /** 24-hour "09:00". A 12/24h setting can come later. */
+    fun time(minuteOfDay: Int): String {
+        val h = minuteOfDay / 60; val m = minuteOfDay % 60
+        return "${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}"
+    }
+    fun time(t: LocalDateTime) = time(t.hour * 60 + t.minute)
+    fun reminderMoment(t: LocalDateTime) = "${weekdayDate(t.date)} at ${time(t)}"
+
+    fun daysBefore(n: Int) = when (n) { 0 -> "On the day"; 1 -> "1 day before"; else -> "$n days before" }
+
+    fun reminderSummary(r: ReminderSettings) =
+        if (!r.enabled) "Off" else "${time(r.minuteOfDay)} · ${daysBefore(r.daysBefore).lowercase()}"
 
     fun weekdayShort(day: DayOfWeek) = when (day) {
         DayOfWeek.MONDAY -> "Mon"; DayOfWeek.TUESDAY -> "Tue"; DayOfWeek.WEDNESDAY -> "Wed"
@@ -54,7 +74,7 @@ object Formats {
         val due = when {
             lateBy > 0 -> "overdue $lateBy ${unitLabel(IntervalUnit.DAY, lateBy)}"
             lateBy == 0 -> "due today"
-            nextDue.daysUntil(today) == -1 -> "due tomorrow"
+            lateBy == -1 -> "due tomorrow"
             else -> "due ${shortDate(nextDue)}"
         }
         return "$rhythm · $due"

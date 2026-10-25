@@ -41,6 +41,7 @@ object Radius {
     val cell = RoundedCornerShape(10.dp); val sm = RoundedCornerShape(8.dp); val md = RoundedCornerShape(12.dp)
     val card = RoundedCornerShape(20.dp); val sheet = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
     val pill = RoundedCornerShape(percent = 50)
+    val heat = RoundedCornerShape(3.dp)
 }
 
 @Immutable
@@ -48,6 +49,7 @@ object Sizes {
     val gridCell: Dp = 44.dp; val gridColumn: Dp = 52.dp; val gridRow: Dp = 56.dp; val habitColumn: Dp = 196.dp
     val touchMin: Dp = 44.dp; val bottomBar: Dp = 56.dp; val swatch: Dp = 32.dp; val dot: Dp = 10.dp
     val outline: Dp = 2.dp; val edge: Dp = 1.dp
+    val heatCell: Dp = 14.dp; val heatGap: Dp = 2.dp
 }
 
 val LocalAppColors = staticCompositionLocalOf { LightAppColors }

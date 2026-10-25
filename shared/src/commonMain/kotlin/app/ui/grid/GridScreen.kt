@@ -2,6 +2,8 @@ package app.ui.grid
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -27,6 +29,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material3.Icon
@@ -44,12 +47,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -64,6 +69,8 @@ import app.design.components.DayCell
 import app.design.components.PillButton
 import app.design.components.habitColors
 import app.ui.text.Formats
+import app.ui.entry.EntrySheet
+import app.core.model.Folder
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import org.koin.compose.viewmodel.koinViewModel
@@ -80,18 +87,24 @@ import kotlin.math.roundToInt
 fun GridScreen(
     onNewHabit: () -> Unit,
     onOpenHabit: (String) -> Unit,
-    onDayNote: (habitId: String, date: LocalDate) -> Unit,
+    onEditFolder: (String) -> Unit,
     onOrganize: () -> Unit,
     onSettings: () -> Unit,
     vm: GridViewModel = koinViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val note by vm.entryEditor.draft.collectAsStateWithLifecycle()
     Box(Modifier.fillMaxSize().background(AppTheme.colors.bg)) {
         when (val s = state) {
             GridUiState.Loading -> Unit
             is GridUiState.Empty -> EmptyGrid(onNewHabit, vm::addTemplate)
-            is GridUiState.Content -> GridContent(s, vm::toggle, onOpenHabit, onDayNote, onNewHabit, onOrganize, onSettings)
+            is GridUiState.Content -> GridContent(
+                s, vm::toggle, onOpenHabit, vm::openNote, vm::toggleFolder, onEditFolder, onNewHabit, onOrganize, onSettings,
+            )
         }
+    }
+    note?.let { draft ->
+        EntrySheet(draft, onSave = vm.entryEditor::save, onDelete = vm.entryEditor::delete, onDismiss = vm.entryEditor::close)
     }
 }
 
@@ -101,6 +114,8 @@ private fun GridContent(
     onToggle: (String, LocalDate) -> Unit,
     onOpenHabit: (String) -> Unit,
     onDayNote: (String, LocalDate) -> Unit,
+    onToggleFolder: (Folder) -> Unit,
+    onEditFolder: (String) -> Unit,
     onNewHabit: () -> Unit,
     onOrganize: () -> Unit,
     onSettings: () -> Unit,
@@ -135,8 +150,11 @@ private fun GridContent(
                 Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = Sizes.bottomBar + Space.x8),
             ) {
-                items(s.rows, key = { it.habit.id }) { row ->
-                    HabitRow(row, offset = { offset }, onToggle, onOpenHabit, onDayNote)
+                items(s.items, key = { it.key }, contentType = { it::class }) { item ->
+                    when (item) {
+                        is GridItem.FolderHeader -> FolderHeader(item, onToggleFolder, onEditFolder)
+                        is GridItem.Row -> HabitRow(item.row, offset = { offset }, onToggle, onOpenHabit, onDayNote)
+                    }
                 }
             }
         }
@@ -219,10 +237,12 @@ private fun HabitRow(
 ) {
     val c = AppTheme.colors
     val hc = habitColors(row.habit.colorKey)
+    val folderBar = row.folderColorKey?.let { habitColors(it).fill }
     Row(Modifier.fillMaxWidth().height(Sizes.gridRow), verticalAlignment = Alignment.CenterVertically) {
-        // pinned name column
+        // pinned name column; habits in a folder get a bar in the folder's colour
+        Box(Modifier.width(Space.x1).fillMaxHeight().padding(vertical = Space.x1).background(folderBar ?: c.bg))
         Row(
-            Modifier.width(Sizes.habitColumn).fillMaxHeight().padding(vertical = Space.x1)
+            Modifier.width(Sizes.habitColumn - Space.x1).fillMaxHeight().padding(vertical = Space.x1)
                 .clip(Radius.md).background(hc.row)
                 .clickable(role = Role.Button) { onOpenHabit(row.habit.id) }
                 .semantics { contentDescription = "${row.habit.name}, ${row.subtitle}. Opens details" }
@@ -245,6 +265,37 @@ private fun HabitRow(
                 onLongPress = { if (cell.isTappable) onDayNote(row.habit.id, cell.date) },
             )
         }
+    }
+}
+
+/** Folder section header: tap to collapse, long-press to edit. Spec: components.md "FolderSectionHeader". */
+@Composable
+private fun FolderHeader(item: GridItem.FolderHeader, onToggle: (Folder) -> Unit, onEdit: (String) -> Unit) {
+    val c = AppTheme.colors
+    val fc = habitColors(item.folder.colorKey)
+    val rotation by animateFloatAsState(if (item.folder.collapsed) -90f else 0f)
+    Column(
+        Modifier.fillMaxWidth()
+            .combinedClickable(
+                role = Role.Button,
+                onClick = { onToggle(item.folder) },
+                onLongClick = { onEdit(item.folder.id) },
+                onLongClickLabel = "Edit folder",
+            )
+            .semantics {
+                heading()
+                contentDescription = "${item.folder.name}, ${item.count} habits"
+                stateDescription = if (item.folder.collapsed) "collapsed" else "expanded"
+            }
+            .padding(start = Space.x3, top = Space.x4, bottom = Space.x1),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.KeyboardArrowDown, null, tint = fc.ink, modifier = Modifier.size(Space.x5).rotate(rotation))
+            Spacer(Modifier.width(Space.x1))
+            Text(item.folder.name, style = AppTheme.type.subhead.copy(fontWeight = FontWeight.SemiBold), color = c.text)
+            Text(" (${item.count})", style = AppTheme.type.subhead, color = c.textMuted)
+        }
+        Box(Modifier.padding(top = Space.x1).width(Sizes.habitColumn * 0.6f).height(Sizes.outline).background(fc.fill))
     }
 }
 

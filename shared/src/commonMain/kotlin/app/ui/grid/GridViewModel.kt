@@ -4,13 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.core.model.Folder
 import app.core.model.Habit
+import app.core.model.Interval
+import app.core.model.IntervalUnit
 import app.core.schedule.Cell
 import app.core.schedule.ScheduleEngine
 import app.data.HabitDraft
 import app.data.HabitRepository
-import app.core.model.Interval
-import app.core.model.IntervalUnit
 import app.platform.AppClock
+import app.ui.entry.EntryEditor
 import app.ui.text.Formats
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,9 +29,16 @@ data class HabitRowUi(
     val habit: Habit,
     val subtitle: String,
     val cells: List<Cell>,
+    /** Colour of the folder the habit sits in, for the left bar. Null = no folder. */
+    val folderColorKey: String?,
 )
 
-/** M1: folders are carried but rendered flat; grouping + collapse arrive in M2. */
+sealed interface GridItem {
+    val key: String
+    data class FolderHeader(val folder: Folder, val count: Int) : GridItem { override val key = "f-${folder.id}" }
+    data class Row(val row: HabitRowUi) : GridItem { override val key = "h-${row.habit.id}" }
+}
+
 sealed interface GridUiState {
     data object Loading : GridUiState
     data class Empty(val today: LocalDate) : GridUiState
@@ -38,8 +46,7 @@ sealed interface GridUiState {
         val today: LocalDate,
         val days: List<LocalDate>,
         val todayIndex: Int,
-        val rows: List<HabitRowUi>,
-        val folders: List<Folder>,
+        val items: List<GridItem>,
     ) : GridUiState
 }
 
@@ -48,23 +55,34 @@ class GridViewModel(
     private val clock: AppClock,
 ) : ViewModel() {
 
+    val entryEditor = EntryEditor(repo, viewModelScope)
+
     val state: StateFlow<GridUiState> =
         combine(repo.habits, repo.entries, repo.folders, clock.todayFlow) { habits, entries, folders, today ->
             if (habits.isEmpty()) return@combine GridUiState.Empty(today)
             val days = window(today)
             val now = clock.now()
             val byHabit = entries.groupBy { it.habitId }
-            val rows = habits.map { h ->
+            val folderIds = folders.map { it.id }.toSet()
+
+            fun rowFor(h: Habit, folder: Folder?): HabitRowUi {
                 val own = byHabit[h.id].orEmpty()
                 val nextDue = ScheduleEngine.nextDue(h, own)
                 val reminderDay = ScheduleEngine.nextReminder(h, own, now)?.date
-                HabitRowUi(
-                    habit = h,
-                    subtitle = Formats.habitSubtitle(h, nextDue, today),
-                    cells = ScheduleEngine.cells(h, own, days, today, reminderDay),
-                )
+                return HabitRowUi(h, Formats.habitSubtitle(h, nextDue, today), ScheduleEngine.cells(h, own, days, today, reminderDay), folder?.colorKey)
             }
-            GridUiState.Content(today, days, days.indexOf(today), rows, folders)
+
+            val items = buildList {
+                // Habits without a folder (or whose folder is gone) come first, without a header.
+                habits.filter { it.folderId == null || it.folderId !in folderIds }
+                    .forEach { add(GridItem.Row(rowFor(it, null))) }
+                folders.forEach { f ->
+                    val inFolder = habits.filter { it.folderId == f.id }
+                    add(GridItem.FolderHeader(f, inFolder.size))
+                    if (!f.collapsed) inFolder.forEach { add(GridItem.Row(rowFor(it, f))) }
+                }
+            }
+            GridUiState.Content(today, days, days.indexOf(today), items)
         }
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GridUiState.Loading)
@@ -74,12 +92,21 @@ class GridViewModel(
         viewModelScope.launch { repo.toggleDay(habitId, date) }
     }
 
+    fun openNote(habitId: String, date: LocalDate) {
+        if (date > clock.today()) return
+        entryEditor.open(habitId, date, clock.today())
+    }
+
+    fun toggleFolder(folder: Folder) {
+        viewModelScope.launch { repo.setFolderCollapsed(folder.id, !folder.collapsed) }
+    }
+
     /** Empty-state templates: one tap to a first habit. */
     fun addTemplate(template: Template) {
         viewModelScope.launch {
             repo.createHabit(
                 HabitDraft(
-                    name = template.name,
+                    name = template.habitName,
                     interval = Interval(template.count, template.unit),
                     colorKey = template.colorKey,
                     anchorDate = clock.today(),
@@ -88,7 +115,7 @@ class GridViewModel(
         }
     }
 
-    enum class Template(val label: String, val name: String, val count: Int, val unit: IntervalUnit, val colorKey: String) {
+    enum class Template(val label: String, val habitName: String, val count: Int, val unit: IntervalUnit, val colorKey: String) {
         VITAMIN("Daily vitamin", "💊 Vitamin", 1, IntervalUnit.DAY, "yellow"),
         SHEETS("Fresh bed sheets · every 2 weeks", "🛏️ Change bed sheets", 2, IntervalUnit.WEEK, "mint"),
         INSURANCE("Car insurance · yearly", "🚗 Renew car insurance", 1, IntervalUnit.YEAR, "indigo"),

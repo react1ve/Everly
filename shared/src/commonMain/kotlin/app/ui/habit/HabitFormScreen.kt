@@ -50,6 +50,7 @@ fun HabitFormScreen(
     vm: HabitFormViewModel = koinViewModel(key = "habit-form-$habitId") { parametersOf(habitId) },
 ) {
     val s by vm.state.collectAsStateWithLifecycle()
+    val folders by vm.folders.collectAsStateWithLifecycle()
     LaunchedEffect(s.closed) { if (s.closed) onClose() }
     val c = AppTheme.colors
 
@@ -106,6 +107,10 @@ fun HabitFormScreen(
             GroupedSection(caption = "Colour") {
                 ColorSwatchPicker(s.color, vm::setColor)
             }
+
+            FolderPickerSection(folders, s.folderId, vm::setFolder, vm::createFolderAndSelect)
+
+            ReminderSection(s, vm::setReminderEnabled, vm::setReminderTime, vm::setRemindDaysBefore)
 
             if (!s.isNew) {
                 PillButton("Delete habit", { vm.askDelete(true) }, Modifier.fillMaxWidth(), kind = ButtonKind.SECONDARY)

@@ -10,22 +10,22 @@ Sticky habit column with interval + next due subtitle,grid,must,yes,partial,S01
 Tap a day cell to check off / undo,grid,must,yes,partial,F02 - 1 tap; future days blocked
 Cell states: done / partial / covered interval / due / idle,grid,must,yes,partial,S01; plus OVERDUE (ours)
 Today highlight + Today button to jump back,grid,must,yes,partial,S01
-Long-press a day to add a note,notes,must,yes,no,S05
-Note indicator on cells,notes,must,yes,partial,S01 badge; badge renders; notes can't be written until S05 (M2)
-Habit detail with entries list and Add Entry,history,must,yes,no,S02 / S08
-Year view heatmap with year switcher,history,must,yes,no,S02
+Long-press a day to add a note,notes,must,yes,partial,"S05; S05 bottom sheet: check + note, discard confirm"
+Note indicator on cells,notes,must,yes,partial,S01 badge; badge renders; notes can't be written until S05 (M2); badge + notes now writable
+Habit detail with entries list and Add Entry,history,must,yes,partial,S02 / S08; S02 + S08 sheet with date picker; edit/delete entries
+Year view heatmap with year switcher,history,must,yes,partial,"S02; weeks x weekdays, today ring, reminder dot, prev/next year"
 Colour per habit (12 swatches),habits,must,yes,partial,S03; placeholder palette
-Folders: create / rename / delete / colour,folders,must,yes,no,S04 / S07
-Collapsible folder sections on the grid with counts,folders,must,yes,no,S01
-Reminder on/off with time per habit,reminders,must,yes,no,S03
-Remind N days before the due day,reminders,must,yes,no,"S03 ""2 days before"""
-Reminders only on due days; rescheduled on check-off,reminders,must,yes,no,local notifications; survive reboot
-Next reminder preview in the form,reminders,should,yes,no,S03
+Folders: create / rename / delete / colour,folders,must,yes,partial,S04 / S07; S07; delete keeps habits; inline create from S03
+Collapsible folder sections on the grid with counts,folders,must,yes,partial,"S01; tap to collapse, long-press to edit"
+Reminder on/off with time per habit,reminders,must,yes,partial,S03; S03; permission asked when toggled on
+Remind N days before the due day,reminders,must,yes,partial,"S03 ""2 days before""; 0/1/2/3/7/14/30 days"
+Reminders only on due days; rescheduled on check-off,reminders,must,yes,partial,local notifications; survive reboot; ReminderCoordinator; Android AlarmManager + boot/time receivers; iOS UNUserNotificationCenter (no background top-up yet)
+Next reminder preview in the form,reminders,should,yes,partial,S03; S03 + S02
 Bell on next reminder day in grid / dot in year view,grid,should,yes,partial,2026.5 release notes; grid bell only; reminders not scheduled yet
 Current-time line through today,grid,should,yes,no,2026.5 release notes
 Tomorrow highlighted for dailies after today is checked,grid,should,yes,partial,2026.5 release notes; falls out of the engine rules; tested
 Organize screen: drag to reorder habits,folders,should,yes,no,S04
-Move habit to folder (and create folder inline),folders,should,yes,no,S03 / S04
+Move habit to folder (and create folder inline),folders,should,yes,partial,S03 / S04; folder picker in S03; Organize drag still M3
 Interactive home-screen widget (check off from widget),widgets,should,yes,no,Glance on Android; WidgetKit (Swift) on iOS
 Lock-screen widget,widgets,should,yes,no,iOS only; Android has no equivalent - skip there
 Export backup to file,data,should,yes,no,Settings; FAQ
@@ -36,7 +36,7 @@ Localization (EN DE RU ZH),settings,could,yes,no,add UZ for home market
 Cross-device sync (replacement for iCloud),data,could,yes,no,decide in replica-architect; makes size L
 Mark done from the notification,reminders,could,unknown,no,not confirmed in original
 Check off from a note sheet,notes,could,yes,no,2026.5 release notes
-Delete entries from context menu,history,could,yes,no,Mac in original; long-press menu on mobile
+Delete entries from context menu,history,could,yes,partial,Mac in original; long-press menu on mobile; delete from the entry sheet instead
 Anonymous usage analytics,analytics,could,yes,no,original uses TelemetryDeck; pick a privacy-friendly option
 Onboarding + first-habit templates,onboarding,could,unknown,partial,not seen in original; empty state with 3 templates; no onboarding
 Desktop app (Compose Desktop),platform,could,yes,no,original has Mac app; later target

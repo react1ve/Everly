@@ -64,4 +64,24 @@ class SnapshotHabitRepositoryTest {
         val repo = SnapshotHabitRepository(MapSettings(), seedIfEmpty = true, today = today)
         assertTrue(repo.habits.first().isNotEmpty())
     }
+
+    @Test fun deletingAFolderKeepsItsHabitsUngrouped() = runTest {
+        val repo = SnapshotHabitRepository(MapSettings(), seedIfEmpty = false, today = today)
+        val folder = repo.createFolder("Home", "teal")
+        val id = repo.createHabit(draft().copy(folderId = folder))
+        repo.setFolderCollapsed(folder, true)
+        assertTrue(repo.folders.first().single().collapsed)
+        repo.deleteFolder(folder)
+        assertTrue(repo.folders.first().isEmpty())
+        assertNull(repo.habit(id)!!.folderId)
+    }
+
+    @Test fun deleteEntryRemovesOnlyThatDay() = runTest {
+        val repo = SnapshotHabitRepository(MapSettings(), seedIfEmpty = false, today = today)
+        val id = repo.createHabit(draft())
+        repo.setNote(id, today, "a", 1)
+        repo.setNote(id, LocalDate(2026, 10, 24), "b", 1)
+        repo.deleteEntry(id, today)
+        assertEquals(listOf("b"), repo.entries.first().map { it.note })
+    }
 }

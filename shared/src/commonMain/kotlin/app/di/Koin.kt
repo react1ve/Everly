@@ -3,7 +3,10 @@ package app.di
 import app.data.HabitRepository
 import app.data.SnapshotHabitRepository
 import app.platform.AppClock
+import app.platform.ReminderCoordinator
 import app.platform.SystemAppClock
+import app.ui.detail.HabitDetailViewModel
+import app.ui.folder.FolderViewModel
 import app.ui.grid.GridViewModel
 import app.ui.habit.HabitFormViewModel
 import com.russhwolf.settings.Settings
@@ -20,14 +23,19 @@ val appModule = module {
     single<AppClock> { SystemAppClock() }
     single<Settings> { Settings() }
     single<HabitRepository> { SnapshotHabitRepository(get(), SEED_SAMPLE_DATA, get<AppClock>().today()) }
+    single { ReminderCoordinator(get(), get(), get()) } // ReminderScheduler comes from the platform module
     viewModel { GridViewModel(get(), get()) }
-    viewModel { params -> HabitFormViewModel(params.get<String>(), get(), get()) }
+    viewModel { params -> HabitFormViewModel(params.get<String>(), get(), get(), get()) }
+    viewModel { params -> HabitDetailViewModel(params.get<String>(), get(), get()) }
+    viewModel { params -> FolderViewModel(params.get<String>(), get()) }
 }
 
+/** [platform] must register a `ReminderScheduler` (see androidApp RecurApp / iosMain MainViewController). */
 fun initKoin(platform: KoinApplication.() -> Unit = {}) {
     if (GlobalContext.getOrNull() != null) return
-    startKoin {
+    val app = startKoin {
         platform()
         modules(appModule)
     }
+    app.koin.get<ReminderCoordinator>().start()
 }

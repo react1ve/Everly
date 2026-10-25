@@ -100,6 +100,33 @@ class SnapshotHabitRepository(
         s.copy(entries = updated) to Unit
     }
 
+    override suspend fun deleteEntry(habitId: String, date: LocalDate) = mutate { s ->
+        s.copy(entries = s.entries - EntryKey(habitId, date)) to Unit
+    }
+
+    override suspend fun folder(id: String): Folder? = state.value.folders.firstOrNull { it.id == id }
+
+    override suspend fun createFolder(name: String, colorKey: String): String = mutate { s ->
+        val id = Uuid.random().toString()
+        val folder = Folder(id, name.trim(), colorKey, (s.folders.maxOfOrNull { it.sortOrder } ?: -1) + 1)
+        s.copy(folders = s.folders + folder) to id
+    }
+
+    override suspend fun updateFolder(id: String, name: String, colorKey: String) = mutate { s ->
+        s.copy(folders = s.folders.map { if (it.id == id) it.copy(name = name.trim(), colorKey = colorKey) else it }) to Unit
+    }
+
+    override suspend fun deleteFolder(id: String) = mutate { s ->
+        s.copy(
+            folders = s.folders.filterNot { it.id == id },
+            habits = s.habits.map { if (it.folderId == id) it.copy(folderId = null) else it },
+        ) to Unit
+    }
+
+    override suspend fun setFolderCollapsed(id: String, collapsed: Boolean) = mutate { s ->
+        s.copy(folders = s.folders.map { if (it.id == id) it.copy(collapsed = collapsed) else it }) to Unit
+    }
+
     // --- internals ---
 
     private suspend fun <T> mutate(block: (Snapshot) -> Pair<Snapshot, T>): T = mutex.withLock {

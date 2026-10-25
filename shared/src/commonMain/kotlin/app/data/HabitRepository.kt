@@ -36,5 +36,14 @@ interface HabitRepository {
 
     /** Cycles the dose count for that day (0 -> 1 -> ... -> doses -> 0). Returns the new count. */
     suspend fun toggleDay(habitId: String, date: LocalDate): Int
+    /** Upsert one day: dose count + note. Removes the row when both are empty. */
     suspend fun setNote(habitId: String, date: LocalDate, note: String?, doseCount: Int)
+    suspend fun deleteEntry(habitId: String, date: LocalDate)
+
+    suspend fun folder(id: String): Folder?
+    suspend fun createFolder(name: String, colorKey: String): String
+    suspend fun updateFolder(id: String, name: String, colorKey: String)
+    /** Habits in the folder fall back to "no folder"; nothing else is deleted. */
+    suspend fun deleteFolder(id: String)
+    suspend fun setFolderCollapsed(id: String, collapsed: Boolean)
 }
