@@ -2,7 +2,9 @@ package app.ui.habit
 
 import androidx.compose.foundation.clickable
 import app.ui.text.L
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -27,14 +29,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.tooling.preview.Preview
 import app.core.model.Folder
+import app.core.model.ReminderSettings
 import app.design.AppTheme
 import app.design.Sizes
 import app.design.Space
 import app.design.components.FormLabelRow
 import app.design.components.GroupedSection
 import app.design.components.SectionDivider
+import app.ui.preview.PreviewData
+import app.ui.preview.PreviewSurface
 import app.ui.text.Formats
+import kotlinx.datetime.LocalDateTime
 
 @Composable
 fun FolderPickerSection(
@@ -164,3 +171,34 @@ fun ReminderSection(
     }
 }
 
+@Preview
+@Composable
+private fun FolderPickerSectionPreview() = PreviewSurface {
+    Column(Modifier.padding(Space.x4), verticalArrangement = Arrangement.spacedBy(Space.x4)) {
+        FolderPickerSection(PreviewData.folders, null, {}, {})
+        FolderPickerSection(PreviewData.folders, PreviewData.folders.first().id, {}, {})
+    }
+}
+
+@Preview
+@Composable
+private fun NameDialogPreview() = PreviewSurface { NameDialog(L.newFolder, L.create, "Garden", {}, {}) }
+
+@Preview(heightDp = 700)
+@Composable
+private fun ReminderSectionPreview() = PreviewSurface {
+    val on = ReminderSettings(enabled = true, minuteOfDay = 8 * 60 + 30, daysBefore = 7)
+    Column(Modifier.padding(Space.x4), verticalArrangement = Arrangement.spacedBy(Space.x4)) {
+        ReminderSection(HabitFormState(), {}, { _, _ -> }, {}) // off
+        ReminderSection(HabitFormState(reminder = on, notificationsAllowed = true, nextReminder = LocalDateTime(2026, 10, 22, 8, 30)), {}, { _, _ -> }, {})
+        ReminderSection(HabitFormState(reminder = on, notificationsAllowed = false), {}, { _, _ -> }, {}) // OS refused
+    }
+}
+
+@Preview(heightDp = 400)
+@Composable
+private fun ReminderSectionDarkPreview() = PreviewSurface(dark = true) {
+    Column(Modifier.padding(Space.x4)) {
+        ReminderSection(HabitFormState(reminder = ReminderSettings(enabled = true), notificationsAllowed = true, nextReminder = PreviewData.now), {}, { _, _ -> }, {})
+    }
+}

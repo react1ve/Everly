@@ -9,11 +9,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import app.design.AppTheme
 import app.design.Space
 import app.design.components.ButtonKind
 import app.design.components.PillButton
 import app.design.components.SheetHeader
+import app.ui.preview.PreviewSurface
 
 /** Placeholder for screens that are routed but not built yet (see build-log.md). */
 @Composable
@@ -35,3 +37,13 @@ fun StubScreen(
         }
     }
 }
+
+@Preview
+@Composable
+private fun StubScreenPreview() = PreviewSurface {
+    StubScreen("S09", "Statistics", "v1.1", onClose = {}, actions = listOf("Open settings" to {}, "Back to grid" to {}))
+}
+
+@Preview
+@Composable
+private fun StubScreenDarkPreview() = PreviewSurface(dark = true) { StubScreen("S09", "Statistics", "v1.1", onClose = {}) }

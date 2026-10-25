@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -18,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import app.core.schedule.Cell
@@ -27,6 +29,9 @@ import app.design.HabitColors
 import app.design.Space
 import app.design.Sizes
 import app.design.Radius
+import app.design.components.habitColors
+import app.ui.preview.PreviewData
+import app.ui.preview.PreviewSurface
 import app.ui.text.Formats
 import kotlinx.datetime.DayOfWeek
 
@@ -100,3 +105,23 @@ private fun HeatCell(cell: Cell?, colors: HabitColors) {
     }
 }
 
+@Composable
+private fun YearHeatmapSamples() {
+    val d = PreviewData
+    Column(Modifier.padding(vertical = Space.x3), verticalArrangement = Arrangement.spacedBy(Space.x4)) {
+        // Daily with a two-dose day, every few days with notes, a yearly habit with a reminder day ahead.
+        listOf("h-omega", "h-swim", "h-eyes").forEach { id ->
+            val cells = d.yearCells(id)
+            YearHeatmap(d.today.year, cells, cells.count { it.state == CellState.DONE }, habitColors(d.habit(id).colorKey))
+        }
+        YearHeatmap(d.today.year - 1, d.yearCells("h-stretch", d.today.year - 1), 0, habitColors("indigo")) // empty past year
+    }
+}
+
+@Preview(widthDp = 420)
+@Composable
+private fun YearHeatmapPreview() = PreviewSurface { YearHeatmapSamples() }
+
+@Preview(widthDp = 420)
+@Composable
+private fun YearHeatmapDarkPreview() = PreviewSurface(dark = true) { YearHeatmapSamples() }

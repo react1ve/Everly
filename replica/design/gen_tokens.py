@@ -94,7 +94,7 @@ common = {
   },
   "space": [0, 4, 8, 12, 16, 20, 24, 32, 48],
   "radius": {"cell": 10, "sm": 8, "md": 12, "card": 20, "sheet": 32, "pill": 999},
-  "size": {"grid-cell": 44, "grid-column": 52, "grid-row": 56, "habit-column": 196,
+  "size": {"grid-cell": 40, "grid-column": 48, "grid-row": 52, "habit-column": 172,
            "touch-min": 44, "bottom-bar": 56, "swatch": 32, "dot": 10, "outline": 2},
   "shadow": {"bar": "0 4 16 rgba(0,0,0,.10)", "sheet": "0 -2 24 rgba(0,0,0,.12)"},
   "motion": {"fast": "120ms", "base": "220ms", "ease": "cubic-bezier(.2,.8,.2,1)",

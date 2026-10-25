@@ -41,6 +41,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.core.model.Entry
 import app.design.AppTheme
@@ -53,11 +54,13 @@ import app.design.components.SectionDivider
 import app.design.components.SheetHeader
 import app.design.components.habitColors
 import app.ui.entry.EntrySheet
+import app.ui.preview.PreviewData
+import app.ui.preview.PreviewSurface
 import app.ui.text.Formats
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-/** S02 Habit detail: year view, settings summary, entries. */
+/** Habit detail: year view, settings summary, entries. */
 @Composable
 fun HabitDetailScreen(
     habitId: String,
@@ -74,6 +77,28 @@ fun HabitDetailScreen(
     if (s !is DetailUiState.Content) {
         Box(Modifier.fillMaxSize().background(c.bg)); return
     }
+    HabitDetailContent(
+        s, onClose = onClose, onEdit = onEdit, onPreviousYear = vm::previousYear, onNextYear = vm::nextYear,
+        onAddEntry = vm::addEntry, onEditEntry = vm::editEntry, onDeleteEntry = { vm.deleteEntry(it) },
+    )
+
+    entryDraft?.let { draft ->
+        EntrySheet(draft, onSave = vm.entryEditor::save, onDelete = vm.entryEditor::delete, onDismiss = vm.entryEditor::close)
+    }
+}
+
+@Composable
+internal fun HabitDetailContent(
+    s: DetailUiState.Content,
+    onClose: () -> Unit,
+    onEdit: () -> Unit,
+    onPreviousYear: () -> Unit,
+    onNextYear: () -> Unit,
+    onAddEntry: () -> Unit,
+    onEditEntry: (Entry) -> Unit,
+    onDeleteEntry: (Entry) -> Unit,
+) {
+    val c = AppTheme.colors
     val hc = habitColors(s.habit.colorKey)
 
     Column(Modifier.fillMaxSize().background(c.bg)) {
@@ -87,9 +112,9 @@ fun HabitDetailScreen(
                 Column {
                     Row(Modifier.fillMaxWidth().padding(start = Space.x4), verticalAlignment = Alignment.CenterVertically) {
                         Text(L.yearView, style = AppTheme.type.subhead, color = c.textMuted, modifier = Modifier.weight(1f))
-                        YearArrow(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, L.previousYear, s.year > s.minYear, vm::previousYear)
+                        YearArrow(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, L.previousYear, s.year > s.minYear, onPreviousYear)
                         Text("${s.year}", style = AppTheme.type.bodyEmphasis, color = c.accent)
-                        YearArrow(Icons.AutoMirrored.Rounded.KeyboardArrowRight, L.nextYear, s.year < s.maxYear, vm::nextYear)
+                        YearArrow(Icons.AutoMirrored.Rounded.KeyboardArrowRight, L.nextYear, s.year < s.maxYear, onNextYear)
                     }
                     Column(Modifier.fillMaxWidth().clip(Radius.card).background(c.surface).padding(vertical = Space.x3)) {
                         YearHeatmap(s.year, s.yearCells, s.doneThisYear, hc, Modifier.fillMaxWidth())
@@ -132,7 +157,7 @@ fun HabitDetailScreen(
             item {
                 Row(
                     Modifier.fillMaxWidth().clip(Radius.card).background(c.surface)
-                        .clickable(role = Role.Button, onClick = vm::addEntry)
+                        .clickable(role = Role.Button, onClick = onAddEntry)
                         .heightIn(min = Sizes.touchMin).padding(horizontal = Space.x4),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -148,13 +173,9 @@ fun HabitDetailScreen(
                 }
             }
             items(s.entries, key = { it.date.toString() }) { entry ->
-                EntryRow(entry, s.habit.dosesPerDay, hc, onClick = { vm.editEntry(entry) }, onDelete = { vm.deleteEntry(entry) })
+                EntryRow(entry, s.habit.dosesPerDay, hc, onClick = { onEditEntry(entry) }, onDelete = { onDeleteEntry(entry) })
             }
         }
-    }
-
-    entryDraft?.let { draft ->
-        EntrySheet(draft, onSave = vm.entryEditor::save, onDelete = vm.entryEditor::delete, onDismiss = vm.entryEditor::close)
     }
 }
 
@@ -203,3 +224,23 @@ private fun EntryRow(entry: Entry, doses: Int, hc: app.design.HabitColors, onCli
     }
     }
 }
+
+@Composable
+private fun DetailSample(id: String, year: Int = PreviewData.today.year) =
+    HabitDetailContent(PreviewData.detail(id, year), {}, {}, {}, {}, {}, {}, {})
+
+@Preview(heightDp = 1000)
+@Composable
+private fun HabitDetailSample() = PreviewSurface { DetailSample("h-omega") }
+
+@Preview(heightDp = 1000)
+@Composable
+private fun HabitDetailDarkPreview() = PreviewSurface(dark = true) { DetailSample("h-swim") }
+
+@Preview(heightDp = 1000)
+@Composable
+private fun HabitDetailLongNamePreview() = PreviewSurface { DetailSample("h-long") }
+
+@Preview(heightDp = 1000)
+@Composable
+private fun HabitDetailReminderPreview() = PreviewSurface { DetailSample("h-eyes") }

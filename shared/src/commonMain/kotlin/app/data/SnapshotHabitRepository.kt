@@ -161,6 +161,25 @@ class SnapshotHabitRepository(
         s.copy(folders = reordered.mapIndexed { idx, f -> f.copy(sortOrder = idx) }) to Unit
     }
 
+    override suspend fun placeHabit(habitId: String, folderId: String?, index: Int) = mutate { s ->
+        val h = s.habits.firstOrNull { it.id == habitId } ?: return@mutate s to Unit
+        val rest = s.habits.filter { it.id != habitId }.sortedBy { it.sortOrder }.toMutableList()
+        val group = rest.filter { it.folderId == folderId }
+        val at = when {
+            index < group.size -> rest.indexOf(group[index.coerceAtLeast(0)])
+            group.isNotEmpty() -> rest.indexOf(group.last()) + 1
+            else -> rest.size
+        }
+        rest.add(at, h.copy(folderId = folderId))
+        s.copy(habits = rest.mapIndexed { i, it -> it.copy(sortOrder = i) }) to Unit
+    }
+
+    override suspend fun reorderFolders(ids: List<String>) = mutate { s ->
+        val rank = ids.withIndex().associate { (i, id) -> id to i }
+        val reordered = s.folders.sortedWith(compareBy({ rank[it.id] ?: Int.MAX_VALUE }, { it.sortOrder }))
+        s.copy(folders = reordered.mapIndexed { i, f -> f.copy(sortOrder = i) }) to Unit
+    }
+
     override suspend fun exportBackup(): String = json.encodeToString(SnapshotDto.serializer(), state.value.toDto())
 
     override suspend fun importBackup(json: String): BackupSummary {

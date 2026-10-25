@@ -145,6 +145,7 @@ object Uz : Strings() {
     override val moveDown = "Pastga"
     override val moveToFolder = "Papkaga ko'chirish"
     override val dragToReorder = "Tartibni o'zgartirish uchun suring"
+    override val folderOptions = "Papka amallari"
 
     override val appearance = "Ko'rinish"
     override val themeAuto = "Avto"

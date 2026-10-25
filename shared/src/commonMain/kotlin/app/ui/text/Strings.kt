@@ -149,6 +149,7 @@ abstract class Strings {
     abstract val moveDown: String
     abstract val moveToFolder: String
     abstract val dragToReorder: String
+    abstract val folderOptions: String
 
     // --- settings ---
     abstract val appearance: String

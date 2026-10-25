@@ -33,15 +33,15 @@ import androidx.compose.runtime.getValue
 import org.koin.compose.koinInject
 import kotlinx.serialization.Serializable
 
-// Routes: one per screen ID in recon.md.
-// S05 (day note) and S08 (entry) are bottom sheets owned by S01 / S02, not routes.
-@Serializable data object GridRoute                          // S01
-@Serializable data class HabitDetailRoute(val id: String)    // S02
-@Serializable data class HabitFormRoute(val id: String = "") // S03 ("" = new)
-@Serializable data object OrganizeRoute                      // S04
-@Serializable data object SettingsRoute                      // S06
-@Serializable data class FolderRoute(val id: String = "")    // S07 ("" = new)
-@Serializable data object CatalogRoute                       // design system check
+// Routes: one per screen.
+// The day note and entry editor are bottom sheets owned by the grid / detail, not routes.
+@Serializable data object GridRoute
+@Serializable data class HabitDetailRoute(val id: String)
+@Serializable data class HabitFormRoute(val id: String = "") // "" = new
+@Serializable data object OrganizeRoute
+@Serializable data object SettingsRoute
+@Serializable data class FolderRoute(val id: String = "") // "" = new
+@Serializable data object CatalogRoute // design system check
 
 @Composable
 fun App() {

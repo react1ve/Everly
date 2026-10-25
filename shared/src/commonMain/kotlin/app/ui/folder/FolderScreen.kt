@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
@@ -34,6 +35,8 @@ import app.design.components.ColorSwatchPicker
 import app.design.components.GroupedSection
 import app.design.components.PillButton
 import app.design.components.SheetHeader
+import app.ui.preview.PreviewData
+import app.ui.preview.PreviewSurface
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -53,7 +56,7 @@ data class FolderFormState(
     val closed: Boolean = false,
 )
 
-/** S07 Folder: name, colour, delete. [folderId] empty = new. */
+/** Folder: name, colour, delete. [folderId] empty = new. */
 class FolderViewModel(
     private val folderId: String,
     private val repo: HabitRepository,
@@ -105,13 +108,25 @@ fun FolderScreen(
     vm: FolderViewModel = koinViewModel(key = "folder-$folderId") { parametersOf(folderId) },
 ) {
     val s by vm.state.collectAsStateWithLifecycle()
-    val c = AppTheme.colors
     LaunchedEffect(s.closed) { if (s.closed) onClose() }
+    FolderContent(s, onClose, vm::save, vm::setName, vm::setColor, vm::askDelete, vm::delete)
+}
 
+@Composable
+internal fun FolderContent(
+    s: FolderFormState,
+    onClose: () -> Unit,
+    onSave: () -> Unit,
+    onName: (String) -> Unit,
+    onColor: (HabitColorKey) -> Unit,
+    onAskDelete: (Boolean) -> Unit,
+    onDelete: () -> Unit,
+) {
+    val c = AppTheme.colors
     Column(Modifier.fillMaxSize().background(c.bg).imePadding()) {
         SheetHeader(
             if (s.isNew) L.newFolder else L.editFolderTitle,
-            onClose = onClose, onPrimary = vm::save, primaryEnabled = s.loaded && s.name.isNotBlank(),
+            onClose = onClose, onPrimary = onSave, primaryEnabled = s.loaded && s.name.isNotBlank(),
         )
         if (!s.loaded) return@Column
         Column(
@@ -120,7 +135,7 @@ fun FolderScreen(
         ) {
             GroupedSection {
                 TextField(
-                    value = s.name, onValueChange = vm::setName, singleLine = true,
+                    value = s.name, onValueChange = onName, singleLine = true,
                     placeholder = { Text(L.folderPlaceholder, color = c.textMuted) },
                     textStyle = AppTheme.type.body.copy(color = c.text), shape = Radius.card,
                     colors = TextFieldDefaults.colors(
@@ -130,24 +145,52 @@ fun FolderScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            GroupedSection(caption = L.colour) { ColorSwatchPicker(s.color, vm::setColor) }
+            GroupedSection(caption = L.colour) { ColorSwatchPicker(s.color, onColor) }
             if (!s.isNew) {
-                PillButton(L.deleteFolder, { vm.askDelete(true) }, Modifier.fillMaxWidth(), kind = ButtonKind.SECONDARY)
+                PillButton(L.deleteFolder, { onAskDelete(true) }, Modifier.fillMaxWidth(), kind = ButtonKind.SECONDARY)
             }
         }
     }
 
     if (s.confirmDelete) {
         AlertDialog(
-            onDismissRequest = { vm.askDelete(false) },
+            onDismissRequest = { onAskDelete(false) },
             title = { Text(L.deleteFolderTitle(s.name)) },
             text = {
                 Text(
                     if (s.habitCount == 0) L.folderEmpty else L.folderHabitsStay(s.habitCount),
                 )
             },
-            confirmButton = { TextButton(onClick = vm::delete) { Text(L.delete, color = c.danger) } },
-            dismissButton = { TextButton(onClick = { vm.askDelete(false) }) { Text(L.cancel) } },
+            confirmButton = { TextButton(onClick = onDelete) { Text(L.delete, color = c.danger) } },
+            dismissButton = { TextButton(onClick = { onAskDelete(false) }) { Text(L.cancel) } },
         )
     }
 }
+
+@Composable
+private fun FolderSample(s: FolderFormState) = FolderContent(s, {}, {}, {}, {}, {}, {})
+
+private val editFolderState = PreviewData.folders.first().let { f ->
+    FolderFormState(isNew = false, loaded = true, name = f.name, color = HabitColorKey.TEAL,
+        habitCount = PreviewData.habits.count { it.folderId == f.id })
+}
+
+@Preview
+@Composable
+private fun FolderNewPreview() = PreviewSurface { FolderSample(FolderFormState(isNew = true, loaded = true)) }
+
+@Preview
+@Composable
+private fun FolderEditPreview() = PreviewSurface { FolderSample(editFolderState) }
+
+@Preview
+@Composable
+private fun FolderEditDarkPreview() = PreviewSurface(dark = true) { FolderSample(editFolderState) }
+
+@Preview
+@Composable
+private fun FolderLoadingPreview() = PreviewSurface { FolderSample(FolderFormState(isNew = false, loaded = false)) }
+
+@Preview
+@Composable
+private fun FolderConfirmDeletePreview() = PreviewSurface { FolderSample(editFolderState.copy(confirmDelete = true)) }

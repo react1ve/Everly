@@ -17,6 +17,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import app.core.model.IntervalUnit
 import app.core.schedule.Cell
 import app.core.schedule.CellState
@@ -31,6 +32,7 @@ import app.design.components.NumberStepper
 import app.design.components.PillButton
 import app.design.components.SegmentedControl
 import app.design.components.SheetHeader
+import app.ui.preview.PreviewSurface
 import kotlinx.datetime.LocalDate
 
 /**
@@ -86,3 +88,11 @@ fun DesignCatalogScreen(onClose: () -> Unit) {
         }
     }
 }
+
+@Preview(heightDp = 1400)
+@Composable
+private fun DesignCatalogPreview() = PreviewSurface { DesignCatalogScreen(onClose = {}) }
+
+@Preview(heightDp = 1400)
+@Composable
+private fun DesignCatalogDarkPreview() = PreviewSurface(dark = true) { DesignCatalogScreen(onClose = {}) }

@@ -154,6 +154,7 @@ object Ru : Strings() {
     override val moveDown = "Ниже"
     override val moveToFolder = "В папку"
     override val dragToReorder = "Перетащите, чтобы изменить порядок"
+    override val folderOptions = "Действия с папкой"
 
     override val appearance = "Оформление"
     override val themeAuto = "Авто"

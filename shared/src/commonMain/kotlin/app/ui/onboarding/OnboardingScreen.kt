@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.core.model.Interval
@@ -57,6 +58,7 @@ import app.platform.AppSettings
 import app.platform.Events
 import app.platform.ReminderScheduler
 import app.ui.grid.GridViewModel
+import app.ui.preview.PreviewSurface
 import app.ui.text.L
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
@@ -94,11 +96,20 @@ class OnboardingViewModel(
     fun skip() = settings.setOnboarded()
 }
 
-/** S11 first run: what it's for, the rolling rule, pick starters. Copy and visuals are our own. */
+/** First run: what it's for, the rolling rule, pick starters. Copy and visuals are our own. */
 @Composable
 fun OnboardingScreen(vm: OnboardingViewModel = koinViewModel()) {
+    OnboardingContent(onSkip = vm::skip, onFinish = vm::finish)
+}
+
+@Composable
+internal fun OnboardingContent(
+    onSkip: () -> Unit,
+    onFinish: (Set<GridViewModel.Template>, Boolean) -> Unit,
+    initialStep: Int = 0,
+) {
     val c = AppTheme.colors
-    var step by remember { mutableIntStateOf(0) }
+    var step by remember { mutableIntStateOf(initialStep) }
     var picked by remember { mutableStateOf(setOf(GridViewModel.Template.VITAMIN)) }
     var remind by remember { mutableStateOf(true) }
 
@@ -106,7 +117,7 @@ fun OnboardingScreen(vm: OnboardingViewModel = koinViewModel()) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Dots(step)
             Spacer(Modifier.weight(1f))
-            if (step < 2) PillButton(L.skip, vm::skip, kind = ButtonKind.GHOST)
+            if (step < 2) PillButton(L.skip, onSkip, kind = ButtonKind.GHOST)
         }
         AnimatedContent(targetState = step, modifier = Modifier.weight(1f)) { page ->
             Column(
@@ -154,7 +165,7 @@ fun OnboardingScreen(vm: OnboardingViewModel = koinViewModel()) {
         }
         PillButton(
             if (step < 2) L.next else L.getStarted,
-            { if (step < 2) step++ else vm.finish(picked, remind) },
+            { if (step < 2) step++ else onFinish(picked, remind) },
             Modifier.fillMaxWidth(),
         )
     }
@@ -198,3 +209,23 @@ private fun SampleRow(states: List<CellState>) {
         }
     }
 }
+
+@Preview
+@Composable
+private fun OnboardingPreview() = PreviewSurface { OnboardingContent({}, { _, _ -> }) }
+
+@Preview
+@Composable
+private fun OnboardingRulePreview() = PreviewSurface { OnboardingContent({}, { _, _ -> }, initialStep = 1) }
+
+@Preview
+@Composable
+private fun OnboardingStartersPreview() = PreviewSurface { OnboardingContent({}, { _, _ -> }, initialStep = 2) }
+
+@Preview
+@Composable
+private fun OnboardingDarkPreview() = PreviewSurface(dark = true) { OnboardingContent({}, { _, _ -> }) }
+
+@Preview
+@Composable
+private fun OnboardingStartersDarkPreview() = PreviewSurface(dark = true) { OnboardingContent({}, { _, _ -> }, initialStep = 2) }

@@ -144,6 +144,7 @@ object En : Strings() {
     override val moveDown = "Move down"
     override val moveToFolder = "Move to folder"
     override val dragToReorder = "Drag to reorder"
+    override val folderOptions = "Folder options"
 
     override val appearance = "Appearance"
     override val themeAuto = "Auto"

@@ -54,6 +54,10 @@ interface HabitRepository {
     /** Swaps with the neighbour in the same group: -1 = up, +1 = down. */
     suspend fun shiftHabit(habitId: String, delta: Int)
     suspend fun shiftFolder(folderId: String, delta: Int)
+    /** Drag-and-drop: puts a habit in [folderId] (null = none) at [index] within that group. */
+    suspend fun placeHabit(habitId: String, folderId: String?, index: Int)
+    /** Drag-and-drop: folders take the order of [ids]; any not listed keep their order after them. */
+    suspend fun reorderFolders(ids: List<String>)
 
     /** The whole dataset as a versioned JSON backup. */
     suspend fun exportBackup(): String

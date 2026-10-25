@@ -47,7 +47,7 @@ data class HabitFormState(
     val canSave: Boolean get() = name.isNotBlank() && !saving
 }
 
-/** S03 New / Edit habit. [habitId] empty = new. */
+/** New / Edit habit. [habitId] empty = new. */
 class HabitFormViewModel(
     private val habitId: String,
     private val repo: HabitRepository,
@@ -86,7 +86,7 @@ class HabitFormViewModel(
         }
     }
 
-    fun setName(v: String) = _state.update { it.copy(name = v.take(Habit.MAX_NAME), showNameError = false) }
+    fun setName(v: String) = _state.update { it.copy(name = v.replace('\n', ' ').take(Habit.MAX_NAME), showNameError = false) }
     fun setCount(v: Int) = edit { it.copy(count = v.coerceIn(1, Interval.MAX_COUNT)) }
     fun setUnit(v: IntervalUnit) = edit { it.copy(unit = v) }
     fun setDoses(v: Int) = edit { it.copy(doses = v.coerceIn(1, Habit.MAX_DOSES)) }

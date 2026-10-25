@@ -53,6 +53,7 @@ kotlin {
             implementation(libs.multiplatform.settings)
             implementation(libs.multiplatform.settings.no.arg)
             implementation(libs.kermit)
+            implementation(libs.compose.ui.tooling.preview)
         }
         androidMain.dependencies {
             implementation(libs.koin.android)
@@ -64,4 +65,9 @@ kotlin {
             implementation(libs.multiplatform.settings.test)
         }
     }
+}
+
+// Lets the IDE render @Preview functions from commonMain; not part of the app runtime.
+dependencies {
+    "androidRuntimeClasspath"(libs.compose.ui.tooling)
 }

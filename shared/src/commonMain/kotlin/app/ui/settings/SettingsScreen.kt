@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
@@ -36,6 +37,7 @@ import app.platform.SystemSettings
 import app.platform.Analytics
 import app.platform.Events
 import app.platform.LanguagePref
+import app.ui.preview.PreviewSurface
 import app.ui.text.L
 import app.design.Sizes
 import androidx.compose.foundation.layout.Row
@@ -147,18 +149,50 @@ class SettingsViewModel(
     }
 }
 
-/** S06 Settings. */
+/** Settings. */
 @Composable
 fun SettingsScreen(onClose: () -> Unit, onCatalog: () -> Unit, vm: SettingsViewModel = koinViewModel()) {
     val s by vm.state.collectAsStateWithLifecycle()
     val theme by vm.appSettings.theme.collectAsStateWithLifecycle()
     val language by vm.appSettings.language.collectAsStateWithLifecycle()
     val analyticsOn by vm.appSettings.analyticsEnabled.collectAsStateWithLifecycle()
-    val c = AppTheme.colors
     LifecycleResumeEffect(Unit) {
         vm.refreshPermission()
         onPauseOrDispose { }
     }
+    SettingsContent(
+        s, theme, language, analyticsOn, onClose = onClose, onCatalog = onCatalog,
+        onTheme = vm.appSettings::setTheme, onLanguage = vm::setLanguage, onAnalytics = vm.appSettings::setAnalytics,
+        onAskNotifications = { vm.askNotifications() }, onOpenAppSettings = vm.system::openAppSettings,
+        onOpenExactAlarms = vm.system::openExactAlarmSettings, onOpenBattery = vm.system::openBatterySettings,
+        onExport = { vm.export() }, onPickImport = { vm.pickImport() }, onConfirmImport = vm::confirmImport,
+        onAskDeleteAll = vm::askDeleteAll, onDeleteAll = vm::deleteAll, onDismissMessage = vm::dismissMessage,
+    )
+}
+
+@Composable
+internal fun SettingsContent(
+    s: SettingsUiState,
+    theme: ThemeMode,
+    language: LanguagePref,
+    analyticsOn: Boolean,
+    onClose: () -> Unit,
+    onCatalog: () -> Unit,
+    onTheme: (ThemeMode) -> Unit,
+    onLanguage: (LanguagePref) -> Unit,
+    onAnalytics: (Boolean) -> Unit,
+    onAskNotifications: () -> Unit,
+    onOpenAppSettings: () -> Unit,
+    onOpenExactAlarms: () -> Unit,
+    onOpenBattery: () -> Unit,
+    onExport: () -> Unit,
+    onPickImport: () -> Unit,
+    onConfirmImport: (Boolean) -> Unit,
+    onAskDeleteAll: (Boolean) -> Unit,
+    onDeleteAll: () -> Unit,
+    onDismissMessage: () -> Unit,
+) {
+    val c = AppTheme.colors
 
     Column(Modifier.fillMaxSize().background(c.bg)) {
         SheetHeader(L.settings, onClose = onClose)
@@ -171,7 +205,7 @@ fun SettingsScreen(onClose: () -> Unit, onCatalog: () -> Unit, vm: SettingsViewM
                     options = ThemeMode.entries,
                     selected = theme,
                     label = { when (it) { ThemeMode.SYSTEM -> L.themeAuto; ThemeMode.LIGHT -> L.themeLight; ThemeMode.DARK -> L.themeDark } },
-                    onSelect = vm.appSettings::setTheme,
+                    onSelect = onTheme,
                 )
             }
 
@@ -187,27 +221,27 @@ fun SettingsScreen(onClose: () -> Unit, onCatalog: () -> Unit, vm: SettingsViewM
                             LanguagePref.UZ -> "O‘zbek"
                         }
                     },
-                    onSelect = vm::setLanguage,
+                    onSelect = onLanguage,
                 )
             }
 
             GroupedSection(caption = L.reminders) {
                 when (s.notificationsAllowed) {
                     true -> FormLabelRow(L.notifications, L.allowed)
-                    false -> FormLabelRow(L.notifications, L.offTapToAllow, onClick = { vm.askNotifications() })
+                    false -> FormLabelRow(L.notifications, L.offTapToAllow, onClick = onAskNotifications)
                     null -> FormLabelRow(L.notifications, "…")
                 }
                 if (s.notificationsAllowed == false) {
                     SectionDivider()
-                    FormLabelRow(L.openNotificationSettings, null, onClick = vm.system::openAppSettings)
+                    FormLabelRow(L.openNotificationSettings, null, onClick = onOpenAppSettings)
                 }
                 s.exactAlarms?.let { exact ->
                     SectionDivider()
-                    FormLabelRow(L.onTimeReminders, if (exact) L.on else L.offTapToAllow, onClick = vm.system::openExactAlarmSettings)
+                    FormLabelRow(L.onTimeReminders, if (exact) L.on else L.offTapToAllow, onClick = onOpenExactAlarms)
                 }
                 s.batteryExempt?.let { exempt ->
                     SectionDivider()
-                    FormLabelRow(L.batteryOptimisation, if (exempt) L.notRestricted else L.restricted, onClick = vm.system::openBatterySettings)
+                    FormLabelRow(L.batteryOptimisation, if (exempt) L.notRestricted else L.restricted, onClick = onOpenBattery)
                 }
             }
             if (s.exactAlarms == false || s.batteryExempt == false) {
@@ -218,11 +252,11 @@ fun SettingsScreen(onClose: () -> Unit, onCatalog: () -> Unit, vm: SettingsViewM
             }
 
             GroupedSection(caption = L.yourData) {
-                FormLabelRow(L.exportBackup, null, onClick = { vm.export() })
+                FormLabelRow(L.exportBackup, null, onClick = onExport)
                 SectionDivider()
-                FormLabelRow(L.restoreBackup, null, onClick = { vm.pickImport() })
+                FormLabelRow(L.restoreBackup, null, onClick = onPickImport)
                 SectionDivider()
-                FormLabelRow(L.deleteEverything, null, onClick = { vm.askDeleteAll(true) })
+                FormLabelRow(L.deleteEverything, null, onClick = { onAskDeleteAll(true) })
             }
             Text(
                 L.dataHint,
@@ -237,7 +271,7 @@ fun SettingsScreen(onClose: () -> Unit, onCatalog: () -> Unit, vm: SettingsViewM
                     Text(L.shareUsage, style = AppTheme.type.body, color = c.text, modifier = Modifier.weight(1f))
                     Switch(
                         checked = analyticsOn,
-                        onCheckedChange = vm.appSettings::setAnalytics,
+                        onCheckedChange = onAnalytics,
                         colors = SwitchDefaults.colors(checkedTrackColor = c.success, checkedThumbColor = c.surface),
                     )
                 }
@@ -254,27 +288,53 @@ fun SettingsScreen(onClose: () -> Unit, onCatalog: () -> Unit, vm: SettingsViewM
 
     s.message?.let { msg ->
         AlertDialog(
-            onDismissRequest = vm::dismissMessage,
+            onDismissRequest = onDismissMessage,
             text = { Text(msg) },
-            confirmButton = { TextButton(onClick = vm::dismissMessage) { Text(L.ok) } },
+            confirmButton = { TextButton(onClick = onDismissMessage) { Text(L.ok) } },
         )
     }
     if (s.confirmImport != null) {
         AlertDialog(
-            onDismissRequest = { vm.confirmImport(false) },
+            onDismissRequest = { onConfirmImport(false) },
             title = { Text(L.replaceEverything) },
             text = { Text(L.replaceBody) },
-            confirmButton = { TextButton(onClick = { vm.confirmImport(true) }) { Text(L.restore, color = c.danger) } },
-            dismissButton = { TextButton(onClick = { vm.confirmImport(false) }) { Text(L.cancel) } },
+            confirmButton = { TextButton(onClick = { onConfirmImport(true) }) { Text(L.restore, color = c.danger) } },
+            dismissButton = { TextButton(onClick = { onConfirmImport(false) }) { Text(L.cancel) } },
         )
     }
     if (s.confirmDeleteAll) {
         AlertDialog(
-            onDismissRequest = { vm.askDeleteAll(false) },
+            onDismissRequest = { onAskDeleteAll(false) },
             title = { Text(L.deleteEverythingTitle) },
             text = { Text(L.deleteEverythingBody) },
-            confirmButton = { TextButton(onClick = vm::deleteAll) { Text(L.delete, color = c.danger) } },
-            dismissButton = { TextButton(onClick = { vm.askDeleteAll(false) }) { Text(L.cancel) } },
+            confirmButton = { TextButton(onClick = onDeleteAll) { Text(L.delete, color = c.danger) } },
+            dismissButton = { TextButton(onClick = { onAskDeleteAll(false) }) { Text(L.cancel) } },
         )
     }
 }
+
+@Composable
+private fun SettingsSample(s: SettingsUiState, theme: ThemeMode = ThemeMode.SYSTEM, analyticsOn: Boolean = false) =
+    SettingsContent(s, theme, LanguagePref.SYSTEM, analyticsOn, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+
+@Preview(heightDp = 1200)
+@Composable
+private fun SettingsPreview() = PreviewSurface {
+    SettingsSample(SettingsUiState(notificationsAllowed = true, exactAlarms = true, batteryExempt = true), analyticsOn = true)
+}
+
+@Preview(heightDp = 1200)
+@Composable
+private fun SettingsRestrictedPreview() = PreviewSurface {
+    SettingsSample(SettingsUiState(notificationsAllowed = false, exactAlarms = false, batteryExempt = false), ThemeMode.LIGHT)
+}
+
+@Preview(heightDp = 1200)
+@Composable
+private fun SettingsDarkPreview() = PreviewSurface(dark = true) {
+    SettingsSample(SettingsUiState(notificationsAllowed = true), ThemeMode.DARK) // iOS: no exact-alarm / battery rows
+}
+
+@Preview
+@Composable
+private fun SettingsMessagePreview() = PreviewSurface { SettingsSample(SettingsUiState(message = L.backupSaved)) }

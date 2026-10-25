@@ -99,6 +99,32 @@ class SnapshotHabitRepositoryTest {
         assertEquals(f, repo.habit(a)!!.folderId)
     }
 
+    @Test fun placeHabitMovesAcrossGroupsAtIndex() = runTest {
+        val repo = SnapshotHabitRepository(MapSettings(), seedIfEmpty = false, today = today)
+        val a = repo.createHabit(draft().copy(name = "a"))
+        val b = repo.createHabit(draft().copy(name = "b"))
+        val c = repo.createHabit(draft().copy(name = "c"))
+        val f = repo.createFolder("F", "teal")
+        repo.placeHabit(a, f, 0)
+        repo.placeHabit(c, f, 0)
+        suspend fun group(id: String?) = repo.habits.first().filter { it.folderId == id }.map { it.name }
+        assertEquals(listOf("c", "a"), group(f))
+        assertEquals(listOf("b"), group(null))
+        repo.placeHabit(c, f, 5) // past the end: goes last
+        assertEquals(listOf("a", "c"), group(f))
+        repo.placeHabit(a, null, 0)
+        assertEquals(listOf("a", "b"), group(null))
+    }
+
+    @Test fun reorderFoldersFollowsTheGivenIds() = runTest {
+        val repo = SnapshotHabitRepository(MapSettings(), seedIfEmpty = false, today = today)
+        val x = repo.createFolder("X", "teal")
+        val y = repo.createFolder("Y", "teal")
+        val z = repo.createFolder("Z", "teal")
+        repo.reorderFolders(listOf(z, x))
+        assertEquals(listOf(z, x, y), repo.folders.first().map { it.id })
+    }
+
     @Test fun backupRoundTripReplacesEverything() = runTest {
         val source = SnapshotHabitRepository(MapSettings(), seedIfEmpty = true, today = today)
         val json = source.exportBackup()

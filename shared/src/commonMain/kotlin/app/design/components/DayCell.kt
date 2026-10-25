@@ -6,7 +6,10 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -25,6 +28,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import app.core.schedule.Cell
 import app.core.schedule.CellState
 import app.design.AppTheme
@@ -33,6 +37,8 @@ import app.design.HabitColors
 import app.design.Radius
 import app.design.Sizes
 import app.design.Space
+import app.ui.preview.PreviewData
+import app.ui.preview.PreviewSurface
 import app.ui.text.Formats
 
 fun habitColorKey(key: String): HabitColorKey =
@@ -68,9 +74,9 @@ fun DayCell(
         CellState.DUE -> colors.outline
         CellState.OVERDUE -> c.danger
         CellState.DONE -> colors.outline // 1dp edge keeps pale fills (yellow) visible on white
-        else -> null
+        else -> if (cell.isToday) colors.outline else null // today's column reads as one outlined strip
     }
-    val borderWidth = if (cell.state == CellState.DONE) Sizes.edge else Sizes.outline
+    val borderWidth = if (cell.state == CellState.DUE || cell.state == CellState.OVERDUE) Sizes.outline else Sizes.edge
     val description = Formats.cellDescription(habitName, cell)
 
     Box(
@@ -112,4 +118,30 @@ fun DayCell(
             )
         }
     }
+}
+
+@Composable
+private fun DayCellStates(colorKey: String) {
+    val d = PreviewData
+    val cells = listOf(
+        d.cell(CellState.DONE, 1), d.cell(CellState.DONE, 1, note = true), d.cell(CellState.PARTIAL, 1, 2),
+        d.cell(CellState.PARTIAL, 2, 3, note = true), d.cell(CellState.COVERED), d.cell(CellState.DUE),
+        d.cell(CellState.OVERDUE), d.cell(CellState.OVERDUE, today = true), d.cell(CellState.IDLE),
+        d.cell(CellState.IDLE, bell = true), d.cell(CellState.IDLE, note = true),
+    )
+    Row(Modifier.padding(Space.x2), horizontalArrangement = Arrangement.spacedBy(Space.x1)) {
+        cells.forEach { DayCell(it, habitColors(colorKey), "Sample", onTap = {}, onLongPress = {}) }
+    }
+}
+
+@Preview(widthDp = 560)
+@Composable
+private fun DayCellPreview() = PreviewSurface {
+    Column { listOf("yellow", "mint", "indigo", "brown", "red").forEach { DayCellStates(it) } }
+}
+
+@Preview(widthDp = 560)
+@Composable
+private fun DayCellDarkPreview() = PreviewSurface(dark = true) {
+    Column { listOf("yellow", "mint", "indigo", "brown", "red").forEach { DayCellStates(it) } }
 }

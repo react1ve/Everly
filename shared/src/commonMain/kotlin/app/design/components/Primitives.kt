@@ -34,11 +34,13 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import app.design.AppTheme
 import app.design.HabitColorKey
 import app.design.Radius
 import app.design.Sizes
 import app.design.Space
+import app.ui.preview.PreviewSurface
 
 /** ✕ · title · primary action. Spec: components.md "SheetHeader". */
 @Composable
@@ -56,7 +58,7 @@ fun SheetHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CircleIconButton(Icons.Rounded.Close, L.close, onClose)
-        Text(title, style = AppTheme.type.title, color = c.text, textAlign = TextAlign.Center, maxLines = 1,
+        Text(title, style = AppTheme.type.title, color = c.text, textAlign = TextAlign.Center,
             modifier = Modifier.weight(1f).padding(horizontal = Space.x2))
         when {
             onPrimary == null -> Spacer(Modifier.size(Sizes.touchMin))
@@ -233,5 +235,107 @@ fun FormLabelRow(label: String, value: String? = null, onClick: (() -> Unit)? = 
     ) {
         Text(label, style = AppTheme.type.body, color = c.text, modifier = Modifier.weight(1f))
         if (value != null) Text(value, style = AppTheme.type.body, color = c.textMuted, modifier = Modifier.widthIn(max = Sizes.habitColumn))
+    }
+}
+
+@Preview
+@Composable
+private fun SheetHeaderPreview() = PreviewSurface {
+    Column {
+        SheetHeader("New habit", onClose = {}, onPrimary = {})
+        SheetHeader("New habit", onClose = {}, onPrimary = {}, primaryEnabled = false)
+        SheetHeader("🏊 Swim", onClose = {}, onPrimary = {}, primaryLabel = "Edit")
+        SheetHeader("Settings", onClose = {})
+        SheetHeader("📚 Read two chapters of the book club novel before the Sunday meeting", onClose = {}, onPrimary = {}, primaryLabel = "Edit")
+    }
+}
+
+@Preview
+@Composable
+private fun CircleIconButtonPreview() = PreviewSurface {
+    Row(Modifier.padding(Space.x4), horizontalArrangement = Arrangement.spacedBy(Space.x3)) {
+        CircleIconButton(Icons.Rounded.Close, "Close", {})
+        CircleIconButton(Icons.Rounded.Check, "Done", {})
+    }
+}
+
+@Preview
+@Composable
+private fun PillButtonPreview() = PreviewSurface {
+    Column(Modifier.padding(Space.x4), verticalArrangement = Arrangement.spacedBy(Space.x2)) {
+        ButtonKind.entries.forEach { k -> PillButton(k.name.lowercase(), {}, Modifier.fillMaxWidth(), kind = k) }
+        ButtonKind.entries.forEach { k -> PillButton("${k.name.lowercase()} · disabled", {}, Modifier.fillMaxWidth(), kind = k, enabled = false) }
+        PillButton("Edit", {})
+    }
+}
+
+@Preview
+@Composable
+private fun GroupedSectionPreview() = PreviewSurface {
+    Column(Modifier.padding(Space.x4), verticalArrangement = Arrangement.spacedBy(Space.x6)) {
+        GroupedSection(caption = "Reminder") {
+            FormLabelRow("Time", "09:00", onClick = {})
+            SectionDivider()
+            FormLabelRow("When", "On the day")
+        }
+        GroupedSection { FormLabelRow("Export backup") }
+    }
+}
+
+@Preview
+@Composable
+private fun NumberStepperPreview() = PreviewSurface {
+    GroupedSection(modifier = Modifier.padding(Space.x4)) {
+        NumberStepper(1, "day", {}, 1..999)
+        SectionDivider()
+        NumberStepper(3, "weeks", {}, 1..999)
+        SectionDivider()
+        NumberStepper(12, "times that day", {}, 1..12)
+    }
+}
+
+@Preview
+@Composable
+private fun SegmentedControlPreview() = PreviewSurface {
+    GroupedSection(modifier = Modifier.padding(Space.x4)) {
+        SegmentedControl(listOf("Day", "Week", "Month", "Year"), "Week", { it }, {})
+        SegmentedControl(listOf("Auto", "Light", "Dark"), "Auto", { it }, {})
+    }
+}
+
+@Preview
+@Composable
+private fun ColorSwatchPickerPreview() = PreviewSurface {
+    Column(Modifier.padding(Space.x4), verticalArrangement = Arrangement.spacedBy(Space.x4)) {
+        GroupedSection { ColorSwatchPicker(HabitColorKey.YELLOW, {}) }
+        GroupedSection { ColorSwatchPicker(HabitColorKey.entries.last(), {}) }
+    }
+}
+
+@Preview
+@Composable
+private fun ColorSwatchPickerDarkPreview() = PreviewSurface(dark = true) {
+    GroupedSection(modifier = Modifier.padding(Space.x4)) { ColorSwatchPicker(HabitColorKey.INDIGO, {}) }
+}
+
+@Preview
+@Composable
+private fun SectionDividerPreview() = PreviewSurface {
+    GroupedSection(modifier = Modifier.padding(Space.x4)) {
+        FormLabelRow("Above")
+        SectionDivider()
+        FormLabelRow("Below")
+    }
+}
+
+@Preview
+@Composable
+private fun FormLabelRowPreview() = PreviewSurface {
+    GroupedSection(modifier = Modifier.padding(Space.x4)) {
+        FormLabelRow("Folder", "Around the flat", onClick = {})
+        SectionDivider()
+        FormLabelRow("Next reminder", "Sat 24 Oct 2026, 09:00 and a value long enough to wrap")
+        SectionDivider()
+        FormLabelRow("Design catalog", null, onClick = {})
     }
 }

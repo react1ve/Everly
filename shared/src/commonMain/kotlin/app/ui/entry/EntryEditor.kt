@@ -40,6 +40,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.tooling.preview.Preview
 import app.core.model.Habit
 import app.data.HabitRepository
 import app.platform.Analytics
@@ -52,6 +53,8 @@ import app.design.components.ButtonKind
 import app.design.components.PillButton
 import app.design.components.SheetHeader
 import app.design.components.habitColors
+import app.ui.preview.PreviewData
+import app.ui.preview.PreviewSurface
 import app.ui.text.Formats
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -72,14 +75,14 @@ data class EntryDraft(
     val doseCount: Int,
     val note: String,
     val isExisting: Boolean,
-    /** S08 "Add entry": the user picks the day. S05 long-press: the day is fixed. */
+    /** "Add entry": the user picks the day. Grid long-press: the day is fixed. */
     val dateEditable: Boolean,
     val today: LocalDate,
 ) {
     val done: Boolean get() = doseCount >= habit.dosesPerDay
 }
 
-/** Shared by the grid (S05 long-press) and habit detail (S08 add / edit entry). */
+/** Shared by the grid (long-press) and habit detail (add / edit entry). */
 class EntryEditor(
     private val repo: HabitRepository,
     private val scope: CoroutineScope,
@@ -127,7 +130,6 @@ class EntryEditor(
 @Composable
 fun EntrySheet(initial: EntryDraft, onSave: (EntryDraft) -> Unit, onDelete: (EntryDraft) -> Unit, onDismiss: () -> Unit) {
     val c = AppTheme.colors
-    val hc = habitColors(initial.habit.colorKey)
     var draft by remember(initial) { mutableStateOf(initial) }
     var confirmDiscard by remember { mutableStateOf(false) }
     var pickDate by remember { mutableStateOf(false) }
@@ -145,63 +147,10 @@ fun EntrySheet(initial: EntryDraft, onSave: (EntryDraft) -> Unit, onDelete: (Ent
         containerColor = c.bg,
         shape = Radius.sheet,
     ) {
-        Column(Modifier.fillMaxWidth().imePadding().padding(bottom = Space.x6)) {
-            SheetHeader(draft.habit.name, onClose = ::tryDismiss, onPrimary = { onSave(draft) })
-            Column(Modifier.padding(horizontal = Space.x4), verticalArrangement = Arrangement.spacedBy(Space.x3)) {
-                Row(
-                    Modifier.fillMaxWidth().clip(Radius.card).background(c.surface).heightIn(min = Sizes.touchMin)
-                        .padding(horizontal = Space.x4, vertical = Space.x2),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Space.x3),
-                ) {
-                    // done toggle
-                    Box(
-                        Modifier.size(Sizes.touchMin * 0.6f).clip(Radius.sm)
-                            .background(if (draft.done) hc.fill else c.surface)
-                            .border(Sizes.outline, if (draft.done) hc.fill else hc.outline, Radius.sm)
-                            .clickable(role = Role.Checkbox) {
-                                draft = draft.copy(doseCount = if (draft.done) 0 else draft.habit.dosesPerDay)
-                            }
-                            .semantics {
-                                contentDescription = L.doneLabel
-                                stateDescription = if (draft.done) L.checked else
-                                    if (draft.doseCount > 0) L.stPartial(draft.doseCount, draft.habit.dosesPerDay) else L.notChecked
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (draft.done) Icon(Icons.Rounded.Check, null, tint = hc.onFill)
-                        else if (draft.doseCount > 0) Text("${draft.doseCount}/${draft.habit.dosesPerDay}", style = AppTheme.type.caption, color = hc.ink)
-                    }
-                    Text(
-                        Formats.longDate(draft.date),
-                        style = AppTheme.type.body,
-                        color = if (draft.dateEditable) c.accent else c.textMuted,
-                        modifier = Modifier.weight(1f)
-                            .let { if (draft.dateEditable) it.clickable(role = Role.Button) { pickDate = true } else it },
-                    )
-                }
-                TextField(
-                    value = draft.note,
-                    onValueChange = { if (it.length <= NOTE_MAX) draft = draft.copy(note = it) },
-                    placeholder = { Text(L.whatHappened, color = c.textMuted) },
-                    minLines = 3,
-                    maxLines = 8,
-                    textStyle = AppTheme.type.body.copy(color = c.text),
-                    shape = Radius.card,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = c.surface, unfocusedContainerColor = c.surface,
-                        focusedIndicatorColor = c.surface, unfocusedIndicatorColor = c.surface, cursorColor = c.accent,
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                if (draft.note.length > NOTE_MAX - 200) {
-                    Text("${draft.note.length} / $NOTE_MAX", style = AppTheme.type.footnote, color = c.textMuted)
-                }
-                if (initial.isExisting) {
-                    PillButton(L.deleteEntry, { onDelete(initial) }, Modifier.fillMaxWidth(), kind = ButtonKind.GHOST)
-                }
-            }
-        }
+        EntrySheetBody(
+            draft, initial.isExisting, onChange = { draft = it }, onClose = ::tryDismiss,
+            onSave = { onSave(draft) }, onDelete = { onDelete(initial) }, onPickDate = { pickDate = true },
+        )
     }
 
     if (pickDate) {
@@ -234,4 +183,105 @@ fun EntrySheet(initial: EntryDraft, onSave: (EntryDraft) -> Unit, onDelete: (Ent
     }
 }
 
+/** The sheet's contents, without the sheet: also what the preview renders. */
+@Composable
+private fun EntrySheetBody(
+    draft: EntryDraft,
+    isExisting: Boolean,
+    onChange: (EntryDraft) -> Unit,
+    onClose: () -> Unit,
+    onSave: () -> Unit,
+    onDelete: () -> Unit,
+    onPickDate: () -> Unit,
+) {
+    val c = AppTheme.colors
+    val hc = habitColors(draft.habit.colorKey)
+    Column(Modifier.fillMaxWidth().imePadding().padding(bottom = Space.x6)) {
+        SheetHeader(draft.habit.name, onClose = onClose, onPrimary = onSave)
+        Column(Modifier.padding(horizontal = Space.x4), verticalArrangement = Arrangement.spacedBy(Space.x3)) {
+            Row(
+                Modifier.fillMaxWidth().clip(Radius.card).background(c.surface).heightIn(min = Sizes.touchMin)
+                    .padding(horizontal = Space.x4, vertical = Space.x2),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Space.x3),
+            ) {
+                // done toggle
+                Box(
+                    Modifier.size(Sizes.touchMin * 0.6f).clip(Radius.sm)
+                        .background(if (draft.done) hc.fill else c.surface)
+                        .border(Sizes.outline, if (draft.done) hc.fill else hc.outline, Radius.sm)
+                        .clickable(role = Role.Checkbox) {
+                            onChange(draft.copy(doseCount = if (draft.done) 0 else draft.habit.dosesPerDay))
+                        }
+                        .semantics {
+                            contentDescription = L.doneLabel
+                            stateDescription = if (draft.done) L.checked else
+                                if (draft.doseCount > 0) L.stPartial(draft.doseCount, draft.habit.dosesPerDay) else L.notChecked
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (draft.done) Icon(Icons.Rounded.Check, null, tint = hc.onFill)
+                    else if (draft.doseCount > 0) Text("${draft.doseCount}/${draft.habit.dosesPerDay}", style = AppTheme.type.caption, color = hc.ink)
+                }
+                Text(
+                    Formats.longDate(draft.date),
+                    style = AppTheme.type.body,
+                    color = if (draft.dateEditable) c.accent else c.textMuted,
+                    modifier = Modifier.weight(1f)
+                        .let { if (draft.dateEditable) it.clickable(role = Role.Button, onClick = onPickDate) else it },
+                )
+            }
+            TextField(
+                value = draft.note,
+                onValueChange = { if (it.length <= NOTE_MAX) onChange(draft.copy(note = it)) },
+                placeholder = { Text(L.whatHappened, color = c.textMuted) },
+                minLines = 3,
+                maxLines = 8,
+                textStyle = AppTheme.type.body.copy(color = c.text),
+                shape = Radius.card,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = c.surface, unfocusedContainerColor = c.surface,
+                    focusedIndicatorColor = c.surface, unfocusedIndicatorColor = c.surface, cursorColor = c.accent,
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (draft.note.length > NOTE_MAX - 200) {
+                Text("${draft.note.length} / $NOTE_MAX", style = AppTheme.type.footnote, color = c.textMuted)
+            }
+            if (isExisting) {
+                PillButton(L.deleteEntry, onDelete, Modifier.fillMaxWidth(), kind = ButtonKind.GHOST)
+            }
+        }
+    }
+}
+
 const val NOTE_MAX = 2000
+
+private fun previewDraft(id: String, date: LocalDate = PreviewData.today, editable: Boolean = false): EntryDraft {
+    val habit = PreviewData.habit(id)
+    val existing = PreviewData.entriesOf(id).firstOrNull { it.date == date }
+    return EntryDraft(habit, date, existing?.doseCount ?: 0, existing?.note.orEmpty(), existing != null, editable, PreviewData.today)
+}
+
+@Composable
+private fun EntrySample(draft: EntryDraft) = EntrySheetBody(draft, draft.isExisting, {}, {}, {}, {}, {})
+
+@Preview
+@Composable
+private fun EntrySheetPreview() = PreviewSurface { EntrySample(previewDraft("h-omega")) } // partial 1/2, with note
+
+@Preview
+@Composable
+private fun EntrySheetNewPreview() = PreviewSurface {
+    EntrySample(previewDraft("h-stretch", editable = true).let { it.copy(doseCount = it.habit.dosesPerDay) })
+}
+
+@Preview
+@Composable
+private fun EntrySheetDarkPreview() = PreviewSurface(dark = true) {
+    EntrySample(previewDraft("h-swim", PreviewData.entriesOf("h-swim").first { it.note != null }.date))
+}
+
+@Preview
+@Composable
+private fun EntrySheetLongNamePreview() = PreviewSurface { EntrySample(previewDraft("h-long")) }

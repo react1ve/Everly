@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -59,8 +61,9 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.design.AppTheme
@@ -72,6 +75,9 @@ import app.design.components.DayCell
 import app.design.components.PillButton
 import app.design.components.habitColors
 import app.ui.text.Formats
+import app.ui.preview.PreviewData
+import app.ui.preview.PreviewSurface
+import androidx.compose.ui.tooling.preview.Preview
 import app.ui.entry.EntrySheet
 import app.core.model.Folder
 import kotlinx.coroutines.launch
@@ -81,8 +87,13 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
+private val HeaderHeight = Sizes.gridRow + Space.x2
+private val RowGap = 3.dp
+private val NameStyle = TextStyle(fontSize = 15.sp, lineHeight = 19.sp, fontWeight = FontWeight.Medium)
+private val SubtitleStyle = TextStyle(fontSize = 12.sp, lineHeight = 15.sp)
+
 /**
- * S01 Grid. Habits are rows (name pinned on the left), days are columns.
+ * Grid. Habits are rows (name pinned on the left), days are columns.
  * One horizontal offset drives the date header and every row, and each row only
  * composes the columns that are on screen, so years of history stay cheap.
  */
@@ -149,7 +160,7 @@ private fun GridContent(
 
         // Now-line: drawn first so it sits behind the cells and shows in the gaps.
         if (todayVisible) {
-            val headerPx = with(density) { (Sizes.gridRow + Space.x2).toPx() }
+            val headerPx = with(density) { HeaderHeight.toPx() }
             val habitColPx = with(density) { Sizes.habitColumn.toPx() }
             Box(
                 Modifier
@@ -161,7 +172,7 @@ private fun GridContent(
         }
 
         Column(Modifier.fillMaxSize().scrollable(scrollState, Orientation.Horizontal)) {
-            HeaderRow(s, leftmostDay, offset = { offset })
+            HeaderRow(s, leftmostDay, stripWidthPx, offset = { offset })
             LazyColumn(
                 Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = Sizes.bottomBar + Space.x8),
@@ -169,7 +180,7 @@ private fun GridContent(
                 items(s.items, key = { it.key }, contentType = { it::class }) { item ->
                     when (item) {
                         is GridItem.FolderHeader -> FolderHeader(item, onToggleFolder, onEditFolder)
-                        is GridItem.Row -> HabitRow(item.row, offset = { offset }, onToggle, onOpenHabit, onDayNote)
+                        is GridItem.Row -> HabitRow(item.row, stripWidthPx, offset = { offset }, onToggle, onOpenHabit, onDayNote)
                     }
                 }
             }
@@ -186,18 +197,21 @@ private fun GridContent(
     }
 }
 
-/** Renders only the visible columns of [count], positioned by the shared [offset]. */
+/**
+ * Renders only the visible columns of [count], positioned by the shared [offset].
+ * [widthPx] comes from the parent rather than BoxWithConstraints, so a row can still take its height
+ * from intrinsics (a habit name that wraps onto several lines makes the whole row taller).
+ */
 @Composable
 private fun VisibleColumns(
     count: Int,
-    height: Dp,
+    widthPx: Float,
     offset: () -> Float,
     modifier: Modifier = Modifier,
     content: @Composable (index: Int) -> Unit,
 ) {
     val colPx = with(LocalDensity.current) { Sizes.gridColumn.toPx() }
-    BoxWithConstraints(modifier.height(height).clipToBounds()) {
-        val widthPx = constraints.maxWidth.toFloat()
+    Box(modifier.clipToBounds()) {
         val o = offset()
         val first = floor(o / colPx).toInt().coerceAtLeast(0)
         val last = ceil((o + widthPx) / colPx).toInt().coerceAtMost(count - 1)
@@ -216,15 +230,15 @@ private fun VisibleColumns(
 }
 
 @Composable
-private fun HeaderRow(s: GridUiState.Content, leftmostDay: LocalDate, offset: () -> Float) {
+private fun HeaderRow(s: GridUiState.Content, leftmostDay: LocalDate, widthPx: Float, offset: () -> Float) {
     val c = AppTheme.colors
     Row(Modifier.fillMaxWidth().background(c.bg), verticalAlignment = Alignment.CenterVertically) {
         Text(
             Formats.monthLong(leftmostDay) + if (leftmostDay.year != s.today.year) " ${leftmostDay.year}" else "",
-            style = AppTheme.type.headline, color = c.text,
+            style = AppTheme.type.title.copy(fontSize = 20.sp, lineHeight = 24.sp), color = c.text,
             modifier = Modifier.width(Sizes.habitColumn).padding(start = Space.x4).semantics { heading() },
         )
-        VisibleColumns(s.days.size, Sizes.gridRow + Space.x2, offset, Modifier.weight(1f)) { i ->
+        VisibleColumns(s.days.size, widthPx, offset, Modifier.weight(1f).height(HeaderHeight)) { i ->
             val day = s.days[i]
             val isToday = day == s.today
             val weekend = Formats.isWeekend(day.dayOfWeek)
@@ -237,7 +251,7 @@ private fun HeaderRow(s: GridUiState.Content, leftmostDay: LocalDate, offset: ()
             ) {
                 Text(Formats.weekdayShort(day.dayOfWeek), style = AppTheme.type.caption,
                     color = if (isToday || weekend) tint else c.textMuted)
-                Text("${day.day}", style = AppTheme.type.date, color = tint)
+                Text("${day.day}", style = AppTheme.type.date.copy(fontSize = 17.sp, lineHeight = 20.sp), color = tint)
             }
         }
     }
@@ -246,6 +260,7 @@ private fun HeaderRow(s: GridUiState.Content, leftmostDay: LocalDate, offset: ()
 @Composable
 private fun HabitRow(
     row: HabitRowUi,
+    widthPx: Float,
     offset: () -> Float,
     onToggle: (String, LocalDate) -> Unit,
     onOpenHabit: (String) -> Unit,
@@ -255,24 +270,28 @@ private fun HabitRow(
     val hc = habitColors(row.habit.colorKey)
     val folderBar = row.folderColorKey?.let { habitColors(it).fill }
     val haptics = LocalHapticFeedback.current
-    Row(Modifier.fillMaxWidth().height(Sizes.gridRow), verticalAlignment = Alignment.CenterVertically) {
+    // Height follows the name column: at least one grid row, taller when the name wraps.
+    Row(
+        Modifier.fillMaxWidth().height(IntrinsicSize.Min).heightIn(min = Sizes.gridRow),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         // pinned name column; habits in a folder get a bar in the folder's colour
-        Box(Modifier.width(Space.x1).fillMaxHeight().padding(vertical = Space.x1).background(folderBar ?: c.bg))
+        Box(Modifier.width(Space.x1).fillMaxHeight().padding(vertical = RowGap).background(folderBar ?: c.bg))
         Row(
-            Modifier.width(Sizes.habitColumn - Space.x1).fillMaxHeight().padding(vertical = Space.x1)
-                .clip(Radius.md).background(hc.row)
+            Modifier.width(Sizes.habitColumn - Space.x1).fillMaxHeight().padding(vertical = RowGap)
+                .clip(Radius.sm).background(hc.row)
                 .clickable(role = Role.Button) { onOpenHabit(row.habit.id) }
                 .semantics { contentDescription = "${row.habit.name}, ${row.subtitle}. ${L.opensDetails}" }
-                .padding(start = Space.x3, end = Space.x1),
+                .padding(start = Space.x3, end = Space.x1, top = Space.x1, bottom = Space.x1),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Text(row.habit.name, style = AppTheme.type.bodyEmphasis, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(row.subtitle, style = AppTheme.type.footnote, color = hc.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(row.habit.name, style = NameStyle, color = c.text)
+                Text(row.subtitle, style = SubtitleStyle, color = hc.ink)
             }
-            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted)
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted, modifier = Modifier.size(Space.x4))
         }
-        VisibleColumns(row.cells.size, Sizes.gridRow, offset, Modifier.weight(1f)) { i ->
+        VisibleColumns(row.cells.size, widthPx, offset, Modifier.weight(1f).fillMaxHeight()) { i ->
             val cell = row.cells[i]
             DayCell(
                 cell = cell,
@@ -317,10 +336,10 @@ private fun FolderHeader(item: GridItem.FolderHeader, onToggle: (Folder) -> Unit
             .padding(start = Space.x3, top = Space.x4, bottom = Space.x1),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.KeyboardArrowDown, null, tint = fc.ink, modifier = Modifier.size(Space.x5).rotate(rotation))
+            Icon(Icons.Rounded.KeyboardArrowDown, null, tint = fc.ink, modifier = Modifier.size(Space.x4).rotate(rotation))
             Spacer(Modifier.width(Space.x1))
-            Text(item.folder.name, style = AppTheme.type.subhead.copy(fontWeight = FontWeight.SemiBold), color = c.text)
-            Text(" (${item.count})", style = AppTheme.type.subhead, color = c.textMuted)
+            Text(item.folder.name, style = AppTheme.type.footnote.copy(fontWeight = FontWeight.SemiBold), color = c.text)
+            Text(" (${item.count})", style = AppTheme.type.footnote, color = c.textMuted)
         }
         Box(Modifier.padding(top = Space.x1).width(Sizes.habitColumn * 0.6f).height(Sizes.outline).background(fc.fill))
     }
@@ -397,3 +416,57 @@ private fun EmptyGrid(onNewHabit: () -> Unit, onTemplate: (GridViewModel.Templat
     }
 }
 
+
+private val previewGrid
+    get() = GridViewModel.buildState(
+        PreviewData.habits, PreviewData.entries, PreviewData.folders, PreviewData.today, PreviewData.now,
+    ) as GridUiState.Content
+
+@Composable
+private fun GridPreviewContent() =
+    GridContent(previewGrid, { _, _ -> }, {}, { _, _ -> }, {}, {}, {}, {}, {})
+
+@Preview(heightDp = 900)
+@Composable
+private fun GridPreview() = PreviewSurface { GridPreviewContent() }
+
+@Preview(heightDp = 900)
+@Composable
+private fun GridDarkPreview() = PreviewSurface(dark = true) { GridPreviewContent() }
+
+@Preview
+@Composable
+private fun HabitRowLongNamePreview() = PreviewSurface {
+    val row = previewGrid.items.filterIsInstance<GridItem.Row>().first { it.row.habit.id == "h-long" }.row
+    BoxWithConstraints {
+        val widthPx = with(LocalDensity.current) { (maxWidth - Sizes.habitColumn).toPx() }
+        val colPx = with(LocalDensity.current) { Sizes.gridColumn.toPx() }
+        HabitRow(row, widthPx, offset = { (previewGrid.todayIndex + 2) * colPx - widthPx }, { _, _ -> }, {}, { _, _ -> })
+    }
+}
+
+@Preview
+@Composable
+private fun FolderHeaderPreview() = PreviewSurface {
+    Column {
+        FolderHeader(GridItem.FolderHeader(PreviewData.folders.first(), 3), {}, {})
+        FolderHeader(GridItem.FolderHeader(PreviewData.folders.last().copy(collapsed = true), 2), {}, {})
+    }
+}
+
+@Preview
+@Composable
+private fun BottomActionBarPreview() = PreviewSurface {
+    Column {
+        BottomActionBar(showToday = true, onToday = {}, onNewHabit = {}, onOrganize = {}, onSettings = {})
+        BottomActionBar(showToday = false, onToday = {}, onNewHabit = {}, onOrganize = {}, onSettings = {})
+    }
+}
+
+@Preview(heightDp = 800)
+@Composable
+private fun EmptyGridPreview() = PreviewSurface { EmptyGrid({}, {}) }
+
+@Preview(heightDp = 800)
+@Composable
+private fun EmptyGridDarkPreview() = PreviewSurface(dark = true) { EmptyGrid({}, {}) }

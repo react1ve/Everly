@@ -23,13 +23,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.core.model.Folder
 import app.core.model.Habit
 import app.core.model.Interval
 import app.core.model.IntervalUnit
+import app.core.model.ReminderSettings
 import app.design.AppTheme
+import app.design.HabitColorKey
 import app.design.Radius
 import app.design.Space
 import app.design.components.ButtonKind
@@ -40,7 +44,11 @@ import app.design.components.PillButton
 import app.design.components.SectionDivider
 import app.design.components.SegmentedControl
 import app.design.components.SheetHeader
+import app.design.components.habitColorKey
+import app.ui.preview.PreviewData
+import app.ui.preview.PreviewSurface
 import app.ui.text.Formats
+import kotlinx.datetime.LocalDateTime
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -53,13 +61,40 @@ fun HabitFormScreen(
     val s by vm.state.collectAsStateWithLifecycle()
     val folders by vm.folders.collectAsStateWithLifecycle()
     LaunchedEffect(s.closed) { if (s.closed) onClose() }
+    HabitFormContent(
+        s, folders, onClose = onClose, onSave = vm::save, onName = vm::setName, onCount = vm::setCount, onUnit = vm::setUnit,
+        onDoses = vm::setDoses, onColor = vm::setColor, onFolder = vm::setFolder, onCreateFolder = vm::createFolderAndSelect,
+        onReminderEnabled = vm::setReminderEnabled, onReminderTime = vm::setReminderTime, onDaysBefore = vm::setRemindDaysBefore,
+        onAskDelete = vm::askDelete, onDelete = vm::delete,
+    )
+}
+
+@Composable
+internal fun HabitFormContent(
+    s: HabitFormState,
+    folders: List<Folder>,
+    onClose: () -> Unit,
+    onSave: () -> Unit,
+    onName: (String) -> Unit,
+    onCount: (Int) -> Unit,
+    onUnit: (IntervalUnit) -> Unit,
+    onDoses: (Int) -> Unit,
+    onColor: (HabitColorKey) -> Unit,
+    onFolder: (String?) -> Unit,
+    onCreateFolder: (String) -> Unit,
+    onReminderEnabled: (Boolean) -> Unit,
+    onReminderTime: (Int, Int) -> Unit,
+    onDaysBefore: (Int) -> Unit,
+    onAskDelete: (Boolean) -> Unit,
+    onDelete: () -> Unit,
+) {
     val c = AppTheme.colors
 
     Column(Modifier.fillMaxSize().background(c.bg).imePadding()) {
         SheetHeader(
             title = if (s.isNew) L.newHabitTitle else L.editHabitTitle,
             onClose = onClose,
-            onPrimary = vm::save,
+            onPrimary = onSave,
             primaryEnabled = s.canSave && s.loaded,
         )
         if (!s.loaded) return@Column
@@ -72,12 +107,13 @@ fun HabitFormScreen(
             GroupedSection {
                 TextField(
                     value = s.name,
-                    onValueChange = vm::setName,
+                    onValueChange = onName,
                     placeholder = { Text(L.namePlaceholder, color = c.textMuted) },
-                    singleLine = true,
+                    singleLine = false,
+                    maxLines = 4,
                     isError = s.showNameError,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { vm.save() }),
+                    keyboardActions = KeyboardActions(onDone = { onSave() }),
                     textStyle = AppTheme.type.body.copy(color = c.text),
                     shape = Radius.card,
                     colors = TextFieldDefaults.colors(
@@ -94,27 +130,27 @@ fun HabitFormScreen(
             }
 
             GroupedSection(caption = L.repeatsEvery) {
-                NumberStepper(s.count, Formats.unitLabel(s.unit, s.count), vm::setCount, 1..Interval.MAX_COUNT)
+                NumberStepper(s.count, Formats.unitLabel(s.unit, s.count), onCount, 1..Interval.MAX_COUNT)
                 SegmentedControl(
                     options = IntervalUnit.entries,
                     selected = s.unit,
                     label = { u -> L.unitName(u) },
-                    onSelect = vm::setUnit,
+                    onSelect = onUnit,
                 )
                 SectionDivider()
-                NumberStepper(s.doses, L.timesThatDay(s.doses), vm::setDoses, 1..Habit.MAX_DOSES)
+                NumberStepper(s.doses, L.timesThatDay(s.doses), onDoses, 1..Habit.MAX_DOSES)
             }
 
             GroupedSection(caption = L.colour) {
-                ColorSwatchPicker(s.color, vm::setColor)
+                ColorSwatchPicker(s.color, onColor)
             }
 
-            FolderPickerSection(folders, s.folderId, vm::setFolder, vm::createFolderAndSelect)
+            FolderPickerSection(folders, s.folderId, onFolder, onCreateFolder)
 
-            ReminderSection(s, vm::setReminderEnabled, vm::setReminderTime, vm::setRemindDaysBefore)
+            ReminderSection(s, onReminderEnabled, onReminderTime, onDaysBefore)
 
             if (!s.isNew) {
-                PillButton(L.deleteHabit, { vm.askDelete(true) }, Modifier.fillMaxWidth(), kind = ButtonKind.SECONDARY)
+                PillButton(L.deleteHabit, { onAskDelete(true) }, Modifier.fillMaxWidth(), kind = ButtonKind.SECONDARY)
             }
             Spacer(Modifier.height(Space.x8))
         }
@@ -122,11 +158,55 @@ fun HabitFormScreen(
 
     if (s.confirmDelete) {
         AlertDialog(
-            onDismissRequest = { vm.askDelete(false) },
+            onDismissRequest = { onAskDelete(false) },
             title = { Text(L.deleteHabitTitle) },
             text = { Text(L.deleteHabitBody) },
-            confirmButton = { TextButton(onClick = vm::delete) { Text(L.delete, color = c.danger) } },
-            dismissButton = { TextButton(onClick = { vm.askDelete(false) }) { Text(L.keepIt) } },
+            confirmButton = { TextButton(onClick = onDelete) { Text(L.delete, color = c.danger) } },
+            dismissButton = { TextButton(onClick = { onAskDelete(false) }) { Text(L.keepIt) } },
         )
     }
 }
+
+/** What HabitFormViewModel shows once [id] has loaded. */
+private fun editState(id: String): HabitFormState {
+    val h = PreviewData.habit(id)
+    return HabitFormState(
+        isNew = false, loaded = true, name = h.name, count = h.interval.count, unit = h.interval.unit, doses = h.dosesPerDay,
+        color = habitColorKey(h.colorKey), folderId = h.folderId, reminder = h.reminder,
+        notificationsAllowed = if (h.reminder.enabled) true else null,
+    )
+}
+
+@Composable
+private fun HabitFormSample(s: HabitFormState) =
+    HabitFormContent(s, PreviewData.folders, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, { _, _ -> }, {}, {}, {})
+
+@Preview(heightDp = 1200)
+@Composable
+private fun HabitFormNewPreview() = PreviewSurface { HabitFormSample(HabitFormState(isNew = true, loaded = true)) }
+
+@Preview(heightDp = 1200)
+@Composable
+private fun HabitFormNewNameErrorPreview() = PreviewSurface {
+    HabitFormSample(HabitFormState(isNew = true, loaded = true, showNameError = true))
+}
+
+@Preview(heightDp = 1200)
+@Composable
+private fun HabitFormEditPreview() = PreviewSurface {
+    HabitFormSample(editState("h-eyes").copy(nextReminder = LocalDateTime(2026, 10, 22, 9, 0)))
+}
+
+@Preview(heightDp = 1200)
+@Composable
+private fun HabitFormEditDarkPreview() = PreviewSurface(dark = true) { HabitFormSample(editState("h-omega")) }
+
+@Preview(heightDp = 1200)
+@Composable
+private fun HabitFormLongNamePreview() = PreviewSurface {
+    HabitFormSample(editState("h-long").copy(reminder = ReminderSettings(enabled = true, daysBefore = 1), notificationsAllowed = false))
+}
+
+@Preview
+@Composable
+private fun HabitFormLoadingPreview() = PreviewSurface { HabitFormSample(HabitFormState(isNew = false, loaded = false)) }
