@@ -1,0 +1,75 @@
+  AAA   18.82:1  text                     on bg                   
+  AAA   21.00:1  text                     on surface              
+  AA     4.69:1  text-muted               on bg                   
+  AA     5.23:1  text-muted               on surface              
+  AA     5.65:1  on-accent                on accent               
+  AA     5.65:1  accent                   on surface              
+  AA     5.06:1  accent                   on bg                   
+  AA     5.38:1  danger                   on surface              
+  AA     5.33:1  success                  on surface              
+  AA     5.31:1  warning                  on surface              
+  AA     5.65:1  today                    on surface              
+  AA     5.38:1  weekend                  on surface              
+  PASS   3.44:1  border-input             on surface              ui
+  PASS   4.24:1  habit-blue-on-fill       on habit-blue-fill      ui
+  AA     4.66:1  habit-blue-ink           on habit-blue-row       
+  AAA   17.45:1  text                     on habit-blue-row       
+  PASS   3.72:1  habit-blue-outline       on habit-blue-idle      ui
+  PASS   4.02:1  habit-blue-outline       on surface              ui
+  PASS   6.61:1  habit-teal-on-fill       on habit-teal-fill      ui
+  AA     4.64:1  habit-teal-ink           on habit-teal-row       
+  AAA   18.52:1  text                     on habit-teal-row       
+  PASS   3.03:1  habit-teal-outline       on habit-teal-idle      ui
+  PASS   3.20:1  habit-teal-outline       on surface              ui
+  PASS   7.66:1  habit-green-on-fill      on habit-green-fill     ui
+  AA     4.62:1  habit-green-ink          on habit-green-row      
+  AAA   18.74:1  text                     on habit-green-row      
+  PASS   3.05:1  habit-green-outline      on habit-green-idle     ui
+  PASS   3.19:1  habit-green-outline      on surface              ui
+  PASS   8.03:1  habit-mint-on-fill       on habit-mint-fill      ui
+  AA     4.68:1  habit-mint-ink           on habit-mint-row       
+  AAA   18.65:1  text                     on habit-mint-row       
+  PASS   3.05:1  habit-mint-outline       on habit-mint-idle      ui
+  PASS   3.20:1  habit-mint-outline       on surface              ui
+  PASS   6.69:1  habit-cyan-on-fill       on habit-cyan-fill      ui
+  AA     4.61:1  habit-cyan-ink           on habit-cyan-row       
+  AAA   18.58:1  text                     on habit-cyan-row       
+  PASS   3.01:1  habit-cyan-outline       on habit-cyan-idle      ui
+  PASS   3.18:1  habit-cyan-outline       on surface              ui
+  PASS   5.65:1  habit-indigo-on-fill     on habit-indigo-fill    ui
+  AA     4.64:1  habit-indigo-ink         on habit-indigo-row     
+  AAA   17.23:1  text                     on habit-indigo-row     
+  PASS   5.21:1  habit-indigo-outline     on habit-indigo-idle    ui
+  PASS   5.65:1  habit-indigo-outline     on surface              ui
+  PASS   4.13:1  habit-purple-on-fill     on habit-purple-fill    ui
+  AA     4.65:1  habit-purple-ink         on habit-purple-row     
+  AAA   17.66:1  text                     on habit-purple-row     
+  PASS   3.84:1  habit-purple-outline     on habit-purple-idle    ui
+  PASS   4.13:1  habit-purple-outline     on surface              ui
+  PASS   4.67:1  habit-pink-on-fill       on habit-pink-fill      ui
+  AA     4.61:1  habit-pink-ink           on habit-pink-row       
+  AAA   17.28:1  text                     on habit-pink-row       
+  PASS   3.35:1  habit-pink-outline       on habit-pink-idle      ui
+  PASS   3.65:1  habit-pink-outline       on surface              ui
+  PASS   4.80:1  habit-red-on-fill        on habit-red-fill       ui
+  AA     4.65:1  habit-red-ink            on habit-red-row        
+  AAA   17.45:1  text                     on habit-red-row        
+  PASS   3.27:1  habit-red-outline        on habit-red-idle       ui
+  PASS   3.55:1  habit-red-outline        on surface              ui
+  PASS   7.74:1  habit-orange-on-fill     on habit-orange-fill    ui
+  AA     4.70:1  habit-orange-ink         on habit-orange-row     
+  AAA   18.74:1  text                     on habit-orange-row     
+  PASS   3.00:1  habit-orange-outline     on habit-orange-idle    ui
+  PASS   3.14:1  habit-orange-outline     on surface              ui
+  PASS  11.25:1  habit-yellow-on-fill     on habit-yellow-fill    ui
+  AA     4.72:1  habit-yellow-ink         on habit-yellow-row     
+  AAA   19.70:1  text                     on habit-yellow-row     
+  PASS   3.07:1  habit-yellow-outline     on habit-yellow-idle    ui
+  PASS   3.16:1  habit-yellow-outline     on surface              ui
+  PASS   4.86:1  habit-brown-on-fill      on habit-brown-fill     ui
+  AA     4.63:1  habit-brown-ink          on habit-brown-row      
+  AAA   18.17:1  text                     on habit-brown-row      
+  PASS   3.30:1  habit-brown-outline      on habit-brown-idle     ui
+  PASS   3.50:1  habit-brown-outline      on surface              ui
+
+  73 pairs, 0 failing AA

@@ -1,0 +1,529 @@
+{
+  "_about": "Design tokens (dark). PLACEHOLDER palette borrowed from the original's iOS-system colours at the user's request; /replica-brand replaces BASE + PALETTE in gen_tokens.py. Role names are stable. Check: python3 contrast.py tokens.json",
+  "color": {
+    "bg": "#000000",
+    "surface": "#1c1c1e",
+    "surface-raised": "#2c2c2e",
+    "border": "#38383a",
+    "border-input": "#8e8e93",
+    "text": "#ffffff",
+    "text-muted": "#aeaeb2",
+    "accent": "#7d7aff",
+    "on-accent": "#000000",
+    "danger": "#ff6961",
+    "success": "#30d158",
+    "warning": "#ffb340",
+    "today": "#7d7aff",
+    "weekend": "#ff6961",
+    "scrim": "#000000",
+    "habit-blue-fill": "#0a84ff",
+    "habit-blue-on-fill": "#1c1c1e",
+    "habit-blue-row": "#183350",
+    "habit-blue-covered": "#17395d",
+    "habit-blue-idle": "#1a2634",
+    "habit-blue-outline": "#0a84ff",
+    "habit-blue-ink": "#3d9eff",
+    "habit-teal-fill": "#40c8e0",
+    "habit-teal-on-fill": "#1c1c1e",
+    "habit-teal-row": "#244249",
+    "habit-teal-covered": "#264c54",
+    "habit-teal-idle": "#202d31",
+    "habit-teal-outline": "#40c8e0",
+    "habit-teal-ink": "#40c8e0",
+    "habit-green-fill": "#30d158",
+    "habit-green-on-fill": "#1c1c1e",
+    "habit-green-row": "#20442b",
+    "habit-green-covered": "#224f2e",
+    "habit-green-idle": "#1e2e24",
+    "habit-green-outline": "#30d158",
+    "habit-green-ink": "#30d158",
+    "habit-mint-fill": "#63e6e2",
+    "habit-mint-on-fill": "#1c1c1e",
+    "habit-mint-row": "#2c4849",
+    "habit-mint-covered": "#305555",
+    "habit-mint-idle": "#233032",
+    "habit-mint-outline": "#63e6e2",
+    "habit-mint-ink": "#63e6e2",
+    "habit-cyan-fill": "#64d2ff",
+    "habit-cyan-on-fill": "#1c1c1e",
+    "habit-cyan-row": "#2c4450",
+    "habit-cyan-covered": "#304f5d",
+    "habit-cyan-idle": "#232e34",
+    "habit-cyan-outline": "#64d2ff",
+    "habit-cyan-ink": "#64d2ff",
+    "habit-indigo-fill": "#5e5ce6",
+    "habit-indigo-on-fill": "#ffffff",
+    "habit-indigo-row": "#2b2a4a",
+    "habit-indigo-covered": "#2e2e56",
+    "habit-indigo-idle": "#232232",
+    "habit-indigo-outline": "#5e5ce6",
+    "habit-indigo-ink": "#8e8dee",
+    "habit-purple-fill": "#bf5af2",
+    "habit-purple-on-fill": "#1c1c1e",
+    "habit-purple-row": "#402a4d",
+    "habit-purple-covered": "#4a2d59",
+    "habit-purple-idle": "#2c2233",
+    "habit-purple-outline": "#bf5af2",
+    "habit-purple-ink": "#cc7bf5",
+    "habit-pink-fill": "#ff375f",
+    "habit-pink-on-fill": "#1c1c1e",
+    "habit-pink-row": "#4e222c",
+    "habit-pink-covered": "#5c2430",
+    "habit-pink-idle": "#331f24",
+    "habit-pink-outline": "#ff375f",
+    "habit-pink-ink": "#ff6382",
+    "habit-red-fill": "#ff453a",
+    "habit-red-on-fill": "#1c1c1e",
+    "habit-red-row": "#4e2524",
+    "habit-red-covered": "#5c2726",
+    "habit-red-idle": "#332021",
+    "habit-red-outline": "#ff453a",
+    "habit-red-ink": "#ff6a61",
+    "habit-orange-fill": "#ff9f0a",
+    "habit-orange-on-fill": "#1c1c1e",
+    "habit-orange-row": "#4e391a",
+    "habit-orange-covered": "#5c4118",
+    "habit-orange-idle": "#33291c",
+    "habit-orange-outline": "#ff9f0a",
+    "habit-orange-ink": "#ff9f0a",
+    "habit-yellow-fill": "#ffd60a",
+    "habit-yellow-on-fill": "#1c1c1e",
+    "habit-yellow-row": "#4e451a",
+    "habit-yellow-covered": "#5c5018",
+    "habit-yellow-idle": "#332f1c",
+    "habit-yellow-outline": "#ffd60a",
+    "habit-yellow-ink": "#ffd60a",
+    "habit-brown-fill": "#ac8e68",
+    "habit-brown-on-fill": "#1c1c1e",
+    "habit-brown-row": "#3c352e",
+    "habit-brown-covered": "#443c33",
+    "habit-brown-idle": "#2a2725",
+    "habit-brown-outline": "#ac8e68",
+    "habit-brown-ink": "#b69c7a"
+  },
+  "pairs": [
+    [
+      "text",
+      "bg"
+    ],
+    [
+      "text",
+      "surface"
+    ],
+    [
+      "text-muted",
+      "bg"
+    ],
+    [
+      "text-muted",
+      "surface"
+    ],
+    [
+      "on-accent",
+      "accent"
+    ],
+    [
+      "accent",
+      "surface"
+    ],
+    [
+      "accent",
+      "bg"
+    ],
+    [
+      "danger",
+      "surface"
+    ],
+    [
+      "success",
+      "surface"
+    ],
+    [
+      "warning",
+      "surface"
+    ],
+    [
+      "today",
+      "surface"
+    ],
+    [
+      "weekend",
+      "surface"
+    ],
+    [
+      "border-input",
+      "surface",
+      "ui"
+    ],
+    [
+      "habit-blue-on-fill",
+      "habit-blue-fill",
+      "ui"
+    ],
+    [
+      "habit-blue-ink",
+      "habit-blue-row"
+    ],
+    [
+      "text",
+      "habit-blue-row"
+    ],
+    [
+      "habit-blue-outline",
+      "habit-blue-idle",
+      "ui"
+    ],
+    [
+      "habit-blue-outline",
+      "surface",
+      "ui"
+    ],
+    [
+      "habit-teal-on-fill",
+      "habit-teal-fill",
+      "ui"
+    ],
+    [
+      "habit-teal-ink",
+      "habit-teal-row"
+    ],
+    [
+      "text",
+      "habit-teal-row"
+    ],
+    [
+      "habit-teal-outline",
+      "habit-teal-idle",
+      "ui"
+    ],
+    [
+      "habit-teal-outline",
+      "surface",
+      "ui"
+    ],
+    [
+      "habit-green-on-fill",
+      "habit-green-fill",
+      "ui"
+    ],
+    [
+      "habit-green-ink",
+      "habit-green-row"
+    ],
+    [
+      "text",
+      "habit-green-row"
+    ],
+    [
+      "habit-green-outline",
+      "habit-green-idle",
+      "ui"
+    ],
+    [
+      "habit-green-outline",
+      "surface",
+      "ui"
+    ],
+    [
+      "habit-mint-on-fill",
+      "habit-mint-fill",
+      "ui"
+    ],
+    [
+      "habit-mint-ink",
+      "habit-mint-row"
+    ],
+    [
+      "text",
+      "habit-mint-row"
+    ],
+    [
+      "habit-mint-outline",
+      "habit-mint-idle",
+      "ui"
+    ],
+    [
+      "habit-mint-outline",
+      "surface",
+      "ui"
+    ],
+    [
+      "habit-cyan-on-fill",
+      "habit-cyan-fill",
+      "ui"
+    ],
+    [
+      "habit-cyan-ink",
+      "habit-cyan-row"
+    ],
+    [
+      "text",
+      "habit-cyan-row"
+    ],
+    [
+      "habit-cyan-outline",
+      "habit-cyan-idle",
+      "ui"
+    ],
+    [
+      "habit-cyan-outline",
+      "surface",
+      "ui"
+    ],
+    [
+      "habit-indigo-on-fill",
+      "habit-indigo-fill",
+      "ui"
+    ],
+    [
+      "habit-indigo-ink",
+      "habit-indigo-row"
+    ],
+    [
+      "text",
+      "habit-indigo-row"
+    ],
+    [
+      "habit-indigo-outline",
+      "habit-indigo-idle",
+      "ui"
+    ],
+    [
+      "habit-indigo-outline",
+      "surface",
+      "ui"
+    ],
+    [
+      "habit-purple-on-fill",
+      "habit-purple-fill",
+      "ui"
+    ],
+    [
+      "habit-purple-ink",
+      "habit-purple-row"
+    ],
+    [
+      "text",
+      "habit-purple-row"
+    ],
+    [
+      "habit-purple-outline",
+      "habit-purple-idle",
+      "ui"
+    ],
+    [
+      "habit-purple-outline",
+      "surface",
+      "ui"
+    ],
+    [
+      "habit-pink-on-fill",
+      "habit-pink-fill",
+      "ui"
+    ],
+    [
+      "habit-pink-ink",
+      "habit-pink-row"
+    ],
+    [
+      "text",
+      "habit-pink-row"
+    ],
+    [
+      "habit-pink-outline",
+      "habit-pink-idle",
+      "ui"
+    ],
+    [
+      "habit-pink-outline",
+      "surface",
+      "ui"
+    ],
+    [
+      "habit-red-on-fill",
+      "habit-red-fill",
+      "ui"
+    ],
+    [
+      "habit-red-ink",
+      "habit-red-row"
+    ],
+    [
+      "text",
+      "habit-red-row"
+    ],
+    [
+      "habit-red-outline",
+      "habit-red-idle",
+      "ui"
+    ],
+    [
+      "habit-red-outline",
+      "surface",
+      "ui"
+    ],
+    [
+      "habit-orange-on-fill",
+      "habit-orange-fill",
+      "ui"
+    ],
+    [
+      "habit-orange-ink",
+      "habit-orange-row"
+    ],
+    [
+      "text",
+      "habit-orange-row"
+    ],
+    [
+      "habit-orange-outline",
+      "habit-orange-idle",
+      "ui"
+    ],
+    [
+      "habit-orange-outline",
+      "surface",
+      "ui"
+    ],
+    [
+      "habit-yellow-on-fill",
+      "habit-yellow-fill",
+      "ui"
+    ],
+    [
+      "habit-yellow-ink",
+      "habit-yellow-row"
+    ],
+    [
+      "text",
+      "habit-yellow-row"
+    ],
+    [
+      "habit-yellow-outline",
+      "habit-yellow-idle",
+      "ui"
+    ],
+    [
+      "habit-yellow-outline",
+      "surface",
+      "ui"
+    ],
+    [
+      "habit-brown-on-fill",
+      "habit-brown-fill",
+      "ui"
+    ],
+    [
+      "habit-brown-ink",
+      "habit-brown-row"
+    ],
+    [
+      "text",
+      "habit-brown-row"
+    ],
+    [
+      "habit-brown-outline",
+      "habit-brown-idle",
+      "ui"
+    ],
+    [
+      "habit-brown-outline",
+      "surface",
+      "ui"
+    ]
+  ],
+  "font": {
+    "sans": "platform default (SF Pro on iOS, Roboto on Android) via FontFamily.Default",
+    "mono": "FontFamily.Monospace"
+  },
+  "type": {
+    "caption": {
+      "size": 11,
+      "line": 13,
+      "weight": 500,
+      "use": "weekday labels, cell n/m"
+    },
+    "footnote": {
+      "size": 13,
+      "line": 18,
+      "weight": 400,
+      "use": "habit subtitle, section captions"
+    },
+    "subhead": {
+      "size": 15,
+      "line": 20,
+      "weight": 400,
+      "use": "form section labels, folder headers (600)"
+    },
+    "body": {
+      "size": 17,
+      "line": 22,
+      "weight": 400,
+      "use": "habit names (500), form rows, notes"
+    },
+    "title": {
+      "size": 17,
+      "line": 22,
+      "weight": 600,
+      "use": "sheet titles"
+    },
+    "date": {
+      "size": 20,
+      "line": 24,
+      "weight": 600,
+      "use": "day numbers in the grid header"
+    },
+    "headline": {
+      "size": 22,
+      "line": 28,
+      "weight": 700,
+      "use": "month label on the grid"
+    },
+    "display": {
+      "size": 34,
+      "line": 41,
+      "weight": 700,
+      "use": "empty state / onboarding"
+    }
+  },
+  "space": [
+    0,
+    4,
+    8,
+    12,
+    16,
+    20,
+    24,
+    32,
+    48
+  ],
+  "radius": {
+    "cell": 10,
+    "sm": 8,
+    "md": 12,
+    "card": 20,
+    "sheet": 32,
+    "pill": 999
+  },
+  "size": {
+    "grid-cell": 44,
+    "grid-column": 52,
+    "grid-row": 56,
+    "habit-column": 196,
+    "touch-min": 44,
+    "bottom-bar": 56,
+    "swatch": 32,
+    "dot": 10,
+    "outline": 2
+  },
+  "shadow": {
+    "bar": "0 4 16 rgba(0,0,0,.10)",
+    "sheet": "0 -2 24 rgba(0,0,0,.12)"
+  },
+  "motion": {
+    "fast": "120ms",
+    "base": "220ms",
+    "ease": "cubic-bezier(.2,.8,.2,1)",
+    "check": "spring(dampingRatio=0.6, stiffness=600) scale 0.85->1"
+  }
+}
