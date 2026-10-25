@@ -62,6 +62,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.IntOffset
@@ -286,7 +287,7 @@ private fun HabitRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Text(row.habit.name, style = NameStyle, color = c.text)
+                Text(row.habit.name, style = NameStyle, color = c.text, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 Text(row.subtitle, style = SubtitleStyle, color = hc.ink)
             }
             Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.textMuted, modifier = Modifier.size(Space.x4))

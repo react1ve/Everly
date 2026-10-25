@@ -29,10 +29,11 @@ Status words: done = built + verified on device; partial = built, something miss
 | 2026-10-25 | Analytics | partial | `Analytics` interface, opt-in (off by default) toggle in Settings, events wired (habit created, day toggled, note, reminder on, folder, backup, onboarding, widget, notification Done). Sink logs locally until a provider key is chosen. | — |
 | 2026-10-25 | S02 | done (code) | Long-press an entry → Delete. | — |
 | 2026-10-25 | Matrix | — | All features implemented on Android marked `yes` (+ "device test pending" until test results arrive). Open: lock-screen widget (iOS), cross-device sync, desktop, analytics provider. | Reviewer caught a misplaced brace in Koin.kt and a wrong Kermit call before sync. |
+| 2026-10-25 | Backend: Firebase | partial (code) | Local-first store now stamps every record + tombstones (generic diff in `mutate`); `SyncEngine` (shared) merges with Firestore last-write-wins, starts pushing only after the first cloud snapshot; Android: Firestore backend, Google sign-in (Credential Manager) + Apple (Firebase web flow), Firebase Analytics sink with opt-in; account section in Settings (sign in/out, status, delete account + cloud data); `firebase/firestore.rules` (owner-only, no older-overwrites-newer). 11 new tests. Builds without google-services.json (sync hidden). iOS: placeholders. Setup steps in `replica/backend.md`. | Merged onto Mukhammad's concurrent Settings refactor with a 3-way patch (one conflict, resolved keeping both). Reviewer caught test timing (backgroundScope) and resource-shrinking of Firebase strings. |
 
 Deviations from architecture.md
 - Modules: `:shared:data/ui/platform` are packages inside `:shared` for now. `:core` is a separate module because the iOS widget needs to link it without Compose.
-- Persistence: snapshot JSON instead of SQLDelight for the vertical slice (replica-build rule: fake data layer with the same signatures).
+- Persistence: snapshot JSON (local) + Firestore (cloud sync) instead of SQLDelight + Supabase, by request. Schema.sql stays as the reference model; the snapshot store is fine for this data size.
 - Icons: Material Symbols (Apache 2.0, via compose material-icons-extended) instead of Lucide, to avoid another dependency during the slice.
 
 Before release: `SEED_SAMPLE_DATA=false`, real applicationId/bundle id, rebranded palette, app name.

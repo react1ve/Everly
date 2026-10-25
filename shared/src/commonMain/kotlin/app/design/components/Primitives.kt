@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,6 +35,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import app.design.AppTheme
 import app.design.HabitColorKey
@@ -58,7 +60,7 @@ fun SheetHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CircleIconButton(Icons.Rounded.Close, L.close, onClose)
-        Text(title, style = AppTheme.type.title, color = c.text, textAlign = TextAlign.Center,
+        Text(title, style = AppTheme.type.title, color = c.text, textAlign = TextAlign.Center, maxLines = 3, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f).padding(horizontal = Space.x2))
         when {
             onPrimary == null -> Spacer(Modifier.size(Sizes.touchMin))
@@ -194,6 +196,40 @@ fun <T> SegmentedControl(
     }
 }
 
+/**
+ * A short single-choice list: one full-width row per option, check on the selected one.
+ * Unlike [SegmentedControl] the labels never compete for width, so long names ("Как в телефоне")
+ * and narrow screens both work.
+ */
+@Composable
+fun <T> OptionList(
+    options: List<T>,
+    selected: T,
+    label: (T) -> String,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val c = AppTheme.colors
+    Column(modifier.fillMaxWidth().selectableGroup()) {
+        options.forEachIndexed { i, option ->
+            val isSel = option == selected
+            if (i > 0) SectionDivider()
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = Sizes.touchMin)
+                    .selectable(selected = isSel, role = Role.RadioButton, onClick = { onSelect(option) })
+                    .padding(horizontal = Space.x4, vertical = Space.x2),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    label(option), style = AppTheme.type.body.copy(fontWeight = if (isSel) FontWeight.SemiBold else FontWeight.Normal),
+                    color = c.text, modifier = Modifier.weight(1f),
+                )
+                if (isSel) Icon(Icons.Rounded.Check, null, tint = c.accent)
+            }
+        }
+    }
+}
+
 /** 12 swatches in two rows. Spec: components.md "ColorSwatchPicker". */
 @Composable
 fun ColorSwatchPicker(selected: HabitColorKey, onSelect: (HabitColorKey) -> Unit, modifier: Modifier = Modifier) {
@@ -227,14 +263,18 @@ fun SectionDivider() {
 @Composable
 fun FormLabelRow(label: String, value: String? = null, onClick: (() -> Unit)? = null) {
     val c = AppTheme.colors
-    Row(
+    // FlowRow: label and value share a line when they fit; on narrow screens or in longer
+    // languages the value drops under the label instead of squeezing it into a mid-word break.
+    FlowRow(
         Modifier.fillMaxWidth().heightIn(min = Sizes.touchMin)
             .let { if (onClick != null) it.clickable(role = Role.Button, onClick = onClick) else it }
-            .padding(horizontal = Space.x4),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(horizontal = Space.x4, vertical = Space.x2),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement = Arrangement.Center,
+        itemVerticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = AppTheme.type.body, color = c.text, modifier = Modifier.weight(1f))
-        if (value != null) Text(value, style = AppTheme.type.body, color = c.textMuted, modifier = Modifier.widthIn(max = Sizes.habitColumn))
+        Text(label, style = AppTheme.type.body, color = c.text, modifier = Modifier.padding(end = Space.x2))
+        if (value != null) Text(value, style = AppTheme.type.subhead, color = c.textMuted)
     }
 }
 
@@ -300,6 +340,19 @@ private fun SegmentedControlPreview() = PreviewSurface {
     GroupedSection(modifier = Modifier.padding(Space.x4)) {
         SegmentedControl(listOf("Day", "Week", "Month", "Year"), "Week", { it }, {})
         SegmentedControl(listOf("Auto", "Light", "Dark"), "Auto", { it }, {})
+    }
+}
+
+@Preview(widthDp = 320)
+@Composable
+private fun OptionListNarrowPreview() = PreviewSurface {
+    Column(Modifier.padding(Space.x4), verticalArrangement = Arrangement.spacedBy(Space.x4)) {
+        GroupedSection(caption = "Language") {
+            OptionList(listOf("Phone", "English", "Русский", "O‘zbek"), "English", { it }, {})
+        }
+        GroupedSection(caption = "Язык") {
+            OptionList(listOf("Как в телефоне", "English", "Русский", "O‘zbek"), "Как в телефоне", { it }, {})
+        }
     }
 }
 

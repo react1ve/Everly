@@ -62,6 +62,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.ViewModel
@@ -122,8 +123,8 @@ class OrganizeViewModel(private val repo: HabitRepository) : ViewModel() {
 
 /**
  * Organise. Long-press a row (or grab its handle) and drag: within a section, or across a folder header
- * into another folder. Long-press a folder header to drag the whole folder. ⋯ and the folder button
- * offer the same moves without dragging, and every move is also an accessibility action.
+ * into another folder. Drag a folder's handle (or long-press its header) to move the whole folder.
+ * Every move is also an accessibility action.
  */
 @Composable
 fun OrganizeScreen(
@@ -204,6 +205,14 @@ internal fun OrganizeContent(
                         onShift = { d -> item.folder?.let { onShiftFolder(it, d) } },
                         dragModifier = if (item.folder == null) Modifier else Modifier.pointerInput(item.key) {
                             detectDragGesturesAfterLongPress(
+                                onDragStart = { drag.start(item) },
+                                onDrag = { change, amount -> change.consume(); drag.by(amount.y) },
+                                onDragEnd = drag::end,
+                                onDragCancel = drag::end,
+                            )
+                        },
+                        handleDrag = Modifier.pointerInput(item.key) {
+                            detectDragGestures(
                                 onDragStart = { drag.start(item) },
                                 onDrag = { change, amount -> change.consume(); drag.by(amount.y) },
                                 onDragEnd = drag::end,
@@ -431,10 +440,10 @@ private fun SectionHeader(
     onEdit: () -> Unit,
     onShift: (Int) -> Unit,
     dragModifier: Modifier,
+    handleDrag: Modifier,
     modifier: Modifier = Modifier,
 ) {
     val c = AppTheme.colors
-    var menu by remember { mutableStateOf(false) }
     Column(modifier.fillMaxWidth().background(c.bg).padding(top = if (first) Space.x2 else Space.x5)) {
         Row(
             dragModifier.fillMaxWidth().heightIn(min = Sizes.touchMin).padding(start = Space.x4)
@@ -458,14 +467,11 @@ private fun SectionHeader(
                 modifier = Modifier.weight(1f).padding(vertical = Space.x2),
             )
             if (folder != null) {
-                Box {
-                    SmallIcon(Icons.Rounded.MoreHoriz, L.folderOptions) { menu = true }
-                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                        DropdownMenuItem(text = { Text(L.editFolder) }, onClick = { menu = false; onEdit() })
-                        if (canMoveUp) DropdownMenuItem(text = { Text(L.moveFolderUp) }, onClick = { menu = false; onShift(-1) })
-                        if (canMoveDown) DropdownMenuItem(text = { Text(L.moveFolderDown) }, onClick = { menu = false; onShift(1) })
-                    }
-                }
+                SmallIcon(Icons.Rounded.MoreHoriz, L.editFolder, onEdit)
+                Box(
+                    handleDrag.size(Sizes.touchMin).semantics { contentDescription = L.dragToReorder },
+                    contentAlignment = Alignment.Center,
+                ) { Icon(Icons.Rounded.DragHandle, null, tint = c.textMuted) }
             }
         }
         if (empty) {
@@ -513,7 +519,7 @@ private fun HabitLine(
             Box(Modifier.size(Sizes.dot).clip(CircleShape).background(habitColors(habit.colorKey).fill))
             Spacer(Modifier.width(Space.x3))
             Text(
-                habit.name, style = AppTheme.type.body, color = c.text,
+                habit.name, style = AppTheme.type.body, color = c.text, maxLines = 3, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f).padding(vertical = Space.x3),
             )
             Box {

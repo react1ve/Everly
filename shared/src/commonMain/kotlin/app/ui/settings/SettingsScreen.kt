@@ -25,6 +25,7 @@ import app.design.Space
 import app.design.components.FormLabelRow
 import app.design.components.GroupedSection
 import app.design.components.SectionDivider
+import app.design.components.OptionList
 import app.design.components.SegmentedControl
 import app.design.components.SheetHeader
 import app.platform.AppClock
@@ -38,6 +39,16 @@ import app.platform.Analytics
 import app.platform.Events
 import app.platform.LanguagePref
 import app.ui.preview.PreviewSurface
+import app.sync.AccountService
+import app.sync.AuthResult
+import app.sync.Provider
+import app.sync.SyncEngine
+import app.sync.Account
+import app.sync.SyncStatus
+import app.ui.text.Formats
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 import app.ui.text.L
 import app.design.Sizes
 import androidx.compose.foundation.layout.Row
@@ -61,6 +72,7 @@ data class SettingsUiState(
     val message: String? = null,
     val confirmImport: String? = null, // the backup text waiting for "replace everything?"
     val confirmDeleteAll: Boolean = false,
+    val confirmDeleteAccount: Boolean = false,
     val busy: Boolean = false,
 )
 
@@ -73,6 +85,8 @@ class SettingsViewModel(
     val appSettings: AppSettings,
     val system: SystemSettings,
     private val analytics: Analytics,
+    val accounts: AccountService,
+    val sync: SyncEngine,
 ) : ViewModel() {
     private val _state = MutableStateFlow(SettingsUiState())
     val state: StateFlow<SettingsUiState> = _state.asStateFlow()
@@ -134,6 +148,38 @@ class SettingsViewModel(
 
     fun dismissMessage() = _state.update { it.copy(message = null) }
 
+    fun setAnalytics(on: Boolean) = analytics.setConsent(on)
+
+    fun signIn(provider: Provider) = busy {
+        when (val r = accounts.signIn(provider)) {
+            AuthResult.Success -> {
+                analytics.track(Events.SIGNED_IN, mapOf("method" to provider.name.lowercase()))
+                analytics.track(Events.SYNC_ENABLED)
+                null
+            }
+            AuthResult.Cancelled -> null
+            is AuthResult.Failed -> when (r.reason) {
+                AuthResult.Reason.NO_ACCOUNT -> L.noGoogleAccount
+                else -> L.signInFailed
+            }
+        }
+    }
+
+    fun signOut() = busy { accounts.signOut(); null }
+
+    fun askDeleteAccount(show: Boolean) = _state.update { it.copy(confirmDeleteAccount = show) }
+
+    fun deleteAccount() = busy {
+        _state.update { it.copy(confirmDeleteAccount = false) }
+        when (val r = sync.deleteAccount()) {
+            AuthResult.Success -> L.accountDeleted
+            AuthResult.Cancelled -> null
+            is AuthResult.Failed ->
+                if (r.reason == AuthResult.Reason.NEEDS_RECENT_LOGIN) L.needsRecentLogin
+                else L.somethingWrong(r.detail ?: r.reason.name)
+        }
+    }
+
     fun setLanguage(pref: LanguagePref) {
         appSettings.setLanguage(pref)
         viewModelScope.launch { coordinator.rescheduleAll() } // notification texts in the new language
@@ -156,19 +202,27 @@ fun SettingsScreen(onClose: () -> Unit, onCatalog: () -> Unit, vm: SettingsViewM
     val theme by vm.appSettings.theme.collectAsStateWithLifecycle()
     val language by vm.appSettings.language.collectAsStateWithLifecycle()
     val analyticsOn by vm.appSettings.analyticsEnabled.collectAsStateWithLifecycle()
+    val account by vm.accounts.account.collectAsStateWithLifecycle()
+    val syncStatus by vm.sync.status.collectAsStateWithLifecycle()
     LifecycleResumeEffect(Unit) {
         vm.refreshPermission()
         onPauseOrDispose { }
     }
     SettingsContent(
         s, theme, language, analyticsOn, onClose = onClose, onCatalog = onCatalog,
-        onTheme = vm.appSettings::setTheme, onLanguage = vm::setLanguage, onAnalytics = vm.appSettings::setAnalytics,
+        onTheme = vm.appSettings::setTheme, onLanguage = vm::setLanguage, onAnalytics = vm::setAnalytics,
         onAskNotifications = { vm.askNotifications() }, onOpenAppSettings = vm.system::openAppSettings,
         onOpenExactAlarms = vm.system::openExactAlarmSettings, onOpenBattery = vm.system::openBatterySettings,
         onExport = { vm.export() }, onPickImport = { vm.pickImport() }, onConfirmImport = vm::confirmImport,
         onAskDeleteAll = vm::askDeleteAll, onDeleteAll = vm::deleteAll, onDismissMessage = vm::dismissMessage,
+        account = if (vm.accounts.isAvailable) AccountUi(account, syncStatus, vm.accounts.providers) else null,
+        onSignIn = vm::signIn, onSignOut = { vm.signOut() },
+        onAskDeleteAccount = vm::askDeleteAccount, onDeleteAccount = { vm.deleteAccount() },
     )
 }
+
+/** What the account section shows; null = cloud not available in this build (section hidden). */
+data class AccountUi(val account: Account?, val status: SyncStatus, val providers: List<Provider>)
 
 @Composable
 internal fun SettingsContent(
@@ -191,6 +245,11 @@ internal fun SettingsContent(
     onAskDeleteAll: (Boolean) -> Unit,
     onDeleteAll: () -> Unit,
     onDismissMessage: () -> Unit,
+    account: AccountUi? = null,
+    onSignIn: (Provider) -> Unit = {},
+    onSignOut: () -> Unit = {},
+    onAskDeleteAccount: (Boolean) -> Unit = {},
+    onDeleteAccount: () -> Unit = {},
 ) {
     val c = AppTheme.colors
 
@@ -210,7 +269,7 @@ internal fun SettingsContent(
             }
 
             GroupedSection(caption = L.language) {
-                SegmentedControl(
+                OptionList(
                     options = LanguagePref.entries,
                     selected = language,
                     label = {
@@ -248,6 +307,18 @@ internal fun SettingsContent(
                 Text(
                     L.batteryHint,
                     style = AppTheme.type.footnote, color = c.textMuted, modifier = Modifier.padding(horizontal = Space.x4),
+                )
+            }
+
+            if (account != null) {
+                AccountSection(
+                    account = account.account,
+                    status = account.status,
+                    providers = account.providers,
+                    busy = s.busy,
+                    onSignIn = onSignIn,
+                    onSignOut = onSignOut,
+                    onDelete = { onAskDeleteAccount(true) },
                 )
             }
 
@@ -302,6 +373,15 @@ internal fun SettingsContent(
             dismissButton = { TextButton(onClick = { onConfirmImport(false) }) { Text(L.cancel) } },
         )
     }
+    if (s.confirmDeleteAccount) {
+        AlertDialog(
+            onDismissRequest = { onAskDeleteAccount(false) },
+            title = { Text(L.deleteAccountTitle) },
+            text = { Text(L.deleteAccountBody) },
+            confirmButton = { TextButton(onClick = onDeleteAccount) { Text(L.delete, color = c.danger) } },
+            dismissButton = { TextButton(onClick = { onAskDeleteAccount(false) }) { Text(L.cancel) } },
+        )
+    }
     if (s.confirmDeleteAll) {
         AlertDialog(
             onDismissRequest = { onAskDeleteAll(false) },
@@ -338,3 +418,71 @@ private fun SettingsDarkPreview() = PreviewSurface(dark = true) {
 @Preview
 @Composable
 private fun SettingsMessagePreview() = PreviewSurface { SettingsSample(SettingsUiState(message = L.backupSaved)) }
+
+@Preview(heightDp = 1400)
+@Composable
+private fun SettingsSignedOutPreview() = PreviewSurface {
+    SettingsContent(
+        SettingsUiState(notificationsAllowed = true), ThemeMode.SYSTEM, LanguagePref.SYSTEM, false,
+        {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
+        account = AccountUi(null, SyncStatus.SignedOut, listOf(Provider.GOOGLE, Provider.APPLE)),
+    )
+}
+
+@Preview(heightDp = 1400)
+@Composable
+private fun SettingsSignedInPreview() = PreviewSurface {
+    SettingsContent(
+        SettingsUiState(notificationsAllowed = true), ThemeMode.SYSTEM, LanguagePref.SYSTEM, true,
+        {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
+        account = AccountUi(Account("u1", "you@example.com", "You", Provider.GOOGLE), SyncStatus.Synced(0, pending = false), listOf(Provider.GOOGLE)),
+    )
+}
+
+@Composable
+private fun AccountSection(
+    account: Account?,
+    status: SyncStatus,
+    providers: List<Provider>,
+    busy: Boolean,
+    onSignIn: (Provider) -> Unit,
+    onSignOut: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val c = AppTheme.colors
+    Column(verticalArrangement = Arrangement.spacedBy(Space.x2)) {
+        GroupedSection(caption = L.accountSync) {
+            if (account == null) {
+                providers.forEachIndexed { i, p ->
+                    if (i > 0) SectionDivider()
+                    FormLabelRow(
+                        if (p == Provider.GOOGLE) L.continueGoogle else L.continueApple,
+                        null,
+                        onClick = { if (!busy) onSignIn(p) },
+                    )
+                }
+            } else {
+                FormLabelRow(L.signedInAs(account.email ?: account.name ?: "—"), null)
+                SectionDivider()
+                FormLabelRow(syncStatusText(status), null)
+                SectionDivider()
+                FormLabelRow(L.signOut, null, onClick = { if (!busy) onSignOut() })
+                SectionDivider()
+                FormLabelRow(L.deleteAccount, null, onClick = { if (!busy) onDelete() })
+            }
+        }
+        Text(
+            if (account == null) L.syncHint else L.signOutHint,
+            style = AppTheme.type.footnote, color = c.textMuted, modifier = Modifier.padding(horizontal = Space.x4),
+        )
+    }
+}
+
+private fun syncStatusText(status: SyncStatus): String = when (status) {
+    SyncStatus.SignedOut, SyncStatus.Connecting -> L.syncConnecting
+    is SyncStatus.Synced -> if (status.pending) L.syncPending else {
+        val t = Instant.fromEpochMilliseconds(status.atMillis).toLocalDateTime(TimeZone.currentSystemDefault())
+        L.syncedAt(Formats.time(t))
+    }
+    is SyncStatus.Error -> L.syncProblem(status.detail)
+}

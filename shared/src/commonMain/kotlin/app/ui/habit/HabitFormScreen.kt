@@ -110,7 +110,7 @@ internal fun HabitFormContent(
                     onValueChange = onName,
                     placeholder = { Text(L.namePlaceholder, color = c.textMuted) },
                     singleLine = false,
-                    maxLines = 4,
+                    maxLines = 3,
                     isError = s.showNameError,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { onSave() }),

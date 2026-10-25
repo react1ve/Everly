@@ -19,17 +19,21 @@ import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.uuid.Uuid
+import kotlin.time.Clock
+import app.sync.SyncRecord
+import app.sync.SyncableStore
 
 /**
- * Stand-in data layer for the vertical slice: the whole dataset as one JSON document
- * in key-value storage. Fine for hundreds of habits and a few years of entries;
- * replaced by SQLDelight in /replica-backend.
+ * Local-first store: the whole dataset as one JSON document in key-value storage (fine for hundreds
+ * of habits and years of entries). Every change is stamped per record ([Snapshot.stamps]) and deletes
+ * leave tombstones ([Snapshot.tombs]) so [app.sync.SyncEngine] can merge with the cloud, last write wins.
  */
 class SnapshotHabitRepository(
     private val settings: Settings,
     seedIfEmpty: Boolean,
     today: LocalDate,
-) : HabitRepository {
+    private val nowMillis: () -> Long = { Clock.System.now().toEpochMilliseconds() },
+) : HabitRepository, SyncableStore {
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val mutex = Mutex()
@@ -41,6 +45,35 @@ class SnapshotHabitRepository(
         state.map { s -> s.folders.sortedBy { it.sortOrder } }.distinctUntilChanged()
     override val entries: Flow<List<Entry>> =
         state.map { it.entries.values.toList() }.distinctUntilChanged()
+
+    override val records: Flow<List<SyncRecord>> = state.map { s ->
+        val live = SyncCodec.fieldsByKey(s).map { (key, fields) ->
+            val (kind, id) = key.split('/', limit = 2)
+            SyncRecord(kind, id, s.stamps[key] ?: 0L, deleted = false, data = fields)
+        }
+        val gone = s.tombs.map { (key, ts) ->
+            val (kind, id) = key.split('/', limit = 2)
+            SyncRecord(kind, id, ts, deleted = true, data = emptyMap())
+        }
+        live + gone
+    }
+
+    override suspend fun applyRemote(records: List<SyncRecord>) = mutex.withLock {
+        var s = state.value
+        var changed = false
+        for (r in records) {
+            val local = s.stamps[r.key] ?: s.tombs[r.key] ?: -1L
+            if (r.updatedAt <= local) continue
+            s = if (r.deleted) s.without(r) else s.with(r) ?: continue
+            s = if (r.deleted) s.copy(stamps = s.stamps - r.key, tombs = s.tombs + (r.key to r.updatedAt))
+            else s.copy(stamps = s.stamps + (r.key to r.updatedAt), tombs = s.tombs - r.key)
+            changed = true
+        }
+        if (changed) {
+            state.value = s
+            save(s)
+        }
+    }
 
     override suspend fun habit(id: String): Habit? = state.value.habits.firstOrNull { it.id == id }
 
@@ -206,15 +239,50 @@ class SnapshotHabitRepository(
     private fun List<Habit>.normalised(): List<Habit> =
         sortedBy { it.sortOrder }.mapIndexed { i, h -> h.copy(sortOrder = i) }
 
+    /** Runs a change and stamps every record it added, changed or removed (tombstone). */
     private suspend fun <T> mutate(block: (Snapshot) -> Pair<Snapshot, T>): T = mutex.withLock {
-        val (next, result) = block(state.value)
-        state.value = next
-        save(next)
+        val before = state.value
+        val (raw, result) = block(before)
+        val next = stamp(before, raw)
+        if (next != before) {
+            state.value = next
+            save(next)
+        }
         result
+    }
+
+    private fun stamp(before: Snapshot, after: Snapshot): Snapshot {
+        val old = SyncCodec.fieldsByKey(before)
+        val new = SyncCodec.fieldsByKey(after)
+        if (old == new) return after.copy(stamps = before.stamps, tombs = before.tombs)
+        val now = nowMillis()
+        val stamps = before.stamps.toMutableMap()
+        val tombs = before.tombs.toMutableMap()
+        for ((k, v) in new) if (old[k] != v) { stamps[k] = now; tombs.remove(k) }
+        for (k in old.keys - new.keys) { stamps.remove(k); tombs[k] = now }
+        return after.copy(stamps = stamps, tombs = tombs)
+    }
+
+    private fun Snapshot.with(r: SyncRecord): Snapshot? = when (r.kind) {
+        SyncRecord.HABITS -> SyncCodec.toHabit(r.id, r.data)?.let { h -> copy(habits = habits.filterNot { it.id == h.id } + h) }
+        SyncRecord.FOLDERS -> SyncCodec.toFolder(r.id, r.data)?.let { f -> copy(folders = folders.filterNot { it.id == f.id } + f) }
+        SyncRecord.ENTRIES -> SyncCodec.toEntry(r.data)?.let { e -> copy(entries = entries + (EntryKey(e.habitId, e.date) to e)) }
+        else -> null
+    }
+
+    private fun Snapshot.without(r: SyncRecord): Snapshot = when (r.kind) {
+        SyncRecord.HABITS -> copy(habits = habits.filterNot { it.id == r.id })
+        SyncRecord.FOLDERS -> copy(folders = folders.filterNot { it.id == r.id })
+        SyncRecord.ENTRIES -> copy(entries = entries.filterKeys { SyncCodec.entryDocId(it.habitId, it.date) != r.id })
+        else -> this
     }
 
     private fun load(): Snapshot? = try {
         settings.getStringOrNull(KEY)?.let { json.decodeFromString(SnapshotDto.serializer(), it).toDomain() }
+            ?.let { s -> // data saved before sync existed: give every record a stamp once
+                val missing = SyncCodec.fieldsByKey(s).keys - s.stamps.keys
+                if (missing.isEmpty()) s else s.copy(stamps = s.stamps + missing.associateWith { nowMillis() })
+            }
     } catch (e: Exception) {
         Logger.e(e) { "Could not read saved data; starting empty" }
         null
@@ -235,6 +303,10 @@ internal data class Snapshot(
     val habits: List<Habit> = emptyList(),
     val folders: List<Folder> = emptyList(),
     val entries: Map<EntryKey, Entry> = emptyMap(),
+    /** "kind/id" -> epoch millis of the last local or applied change. */
+    val stamps: Map<String, Long> = emptyMap(),
+    /** "kind/id" -> epoch millis of deletion. */
+    val tombs: Map<String, Long> = emptyMap(),
 )
 
 // --- persistence DTOs (also the shape of the future backup file) ---
@@ -245,8 +317,10 @@ internal data class SnapshotDto(
     val habits: List<HabitDto> = emptyList(),
     val folders: List<FolderDto> = emptyList(),
     val entries: List<EntryDto> = emptyList(),
+    val stamps: Map<String, Long> = emptyMap(),
+    val tombs: Map<String, Long> = emptyMap(),
 ) {
-    companion object { const val CURRENT_VERSION = 1 }
+    companion object { const val CURRENT_VERSION = 2 } // 2: sync stamps; v1 files still load
 }
 
 @Serializable
@@ -270,6 +344,8 @@ internal fun Snapshot.toDto() = SnapshotDto(
     },
     folders = folders.map { FolderDto(it.id, it.name, it.colorKey, it.sortOrder, it.collapsed) },
     entries = entries.values.map { EntryDto(it.habitId, it.date.toString(), it.doseCount, it.note) },
+    stamps = stamps,
+    tombs = tombs,
 )
 
 internal fun SnapshotDto.toDomain() = Snapshot(
@@ -287,4 +363,6 @@ internal fun SnapshotDto.toDomain() = Snapshot(
         val date = LocalDate.parse(it.date)
         EntryKey(it.habitId, date) to Entry(it.habitId, date, it.doseCount, it.note)
     },
+    stamps = stamps,
+    tombs = tombs,
 )

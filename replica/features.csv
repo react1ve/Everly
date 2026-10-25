@@ -33,11 +33,11 @@ Import backup,data,should,unknown,yes,needed to make export useful on a new devi
 Settings: notifications permission + status,settings,should,yes,yes,FAQ; S06; Android: exact-alarm + battery optimisation rows; device test pending
 Colour themes / dark mode,settings,should,yes,yes,listing mentions colour themes; Auto/Light/Dark in Settings; dark palette from tokens; device test pending
 Localization (EN DE RU ZH),settings,could,yes,yes,add UZ for home market; shipped EN/RU/UZ with in-app picker (DE/ZH not planned); device test pending
-Cross-device sync (replacement for iCloud),data,could,yes,no,decide in replica-architect; makes size L
+Cross-device sync (replacement for iCloud),data,could,yes,partial,"decide in replica-architect; makes size L; Firebase Auth (Google + Apple) + Firestore, last-write-wins per record, offline queue; Android done, iOS pending; needs your Firebase project + google-services.json"
 Mark done from the notification,reminders,could,unknown,yes,not confirmed in original; Android: Done action on the notification; iOS later; Android; iOS pending; device test pending
 Check off from a note sheet,notes,could,yes,yes,2026.5 release notes; done toggle in the entry sheet; device test pending
 Delete entries from context menu,history,could,yes,yes,Mac in original; long-press menu on mobile; delete from the entry sheet instead; long-press menu on S02 entries + delete in sheet; device test pending
-Anonymous usage analytics,analytics,could,yes,partial,original uses TelemetryDeck; pick a privacy-friendly option; opt-in + events wired; provider key needed (logs locally until then)
+Anonymous usage analytics,analytics,could,yes,yes,"original uses TelemetryDeck; pick a privacy-friendly option; opt-in + events wired; provider key needed (logs locally until then); Firebase Analytics, opt-in only, no ad ID; Android; device test pending"
 Onboarding + first-habit templates,onboarding,could,unknown,yes,not seen in original; empty state with 3 templates; no onboarding; S11 3-step onboarding + starter picker + reminder opt-in; device test pending
 Desktop app (Compose Desktop),platform,could,yes,no,original has Mac app; later target
 iCloud / CloudKit sync,data,should,yes,skip,Apple-only service; replaced by our own sync row above

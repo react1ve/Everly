@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// Cloud layout: users/{uid}/{habits|folders|entries}/{docId}
+// Each doc: app fields + updatedAt (int, client ms) + deleted (bool) + serverTime (timestamp)
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // The per-user root doc only exists so account deletion can remove it.
+    match /users/{uid} {
+      allow read, delete: if isOwner(uid);
+    }
+
+    match /users/{uid}/{kind}/{docId} {
+      allow read, delete: if isOwner(uid) && validKind(kind);
+
+      // Create: owner only, well-formed.
+      allow create: if isOwner(uid) && validKind(kind) && wellFormed();
+
+      // Update: owner only, and never let an older change overwrite a newer one (last write wins).
+      allow update: if isOwner(uid) && validKind(kind) && wellFormed()
+                    && request.resource.data.updatedAt >= resource.data.updatedAt;
+    }
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function validKind(kind) {
+      return kind in ['habits', 'folders', 'entries'];
+    }
+
+    function wellFormed() {
+      let d = request.resource.data;
+      return d.updatedAt is int
+          && d.deleted is bool
+          && d.size() <= 20
+          && (!('note' in d) || d.note == null || (d.note is string && d.note.size() <= 2000))
+          && (!('name' in d) || (d.name is string && d.name.size() <= 80));
+    }
+  }
+}

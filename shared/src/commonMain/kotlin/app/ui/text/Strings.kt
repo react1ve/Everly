@@ -149,7 +149,6 @@ abstract class Strings {
     abstract val moveDown: String
     abstract val moveToFolder: String
     abstract val dragToReorder: String
-    abstract val folderOptions: String
 
     // --- settings ---
     abstract val appearance: String
@@ -190,6 +189,26 @@ abstract class Strings {
     abstract val deleteEverythingBody: String
     abstract val backupNewer: String
     abstract val backupInvalid: String
+
+    // --- account & sync ---
+    abstract val accountSync: String
+    abstract val continueGoogle: String
+    abstract val continueApple: String
+    abstract val syncHint: String
+    abstract fun signedInAs(who: String): String
+    abstract val syncConnecting: String
+    abstract fun syncedAt(time: String): String
+    abstract val syncPending: String
+    abstract fun syncProblem(detail: String): String
+    abstract val signOut: String
+    abstract val signOutHint: String
+    abstract val deleteAccount: String
+    abstract val deleteAccountTitle: String
+    abstract val deleteAccountBody: String
+    abstract val needsRecentLogin: String
+    abstract val signInFailed: String
+    abstract val noGoogleAccount: String
+    abstract val accountDeleted: String
 
     // --- widget ---
     abstract fun toDo(n: Int): String

@@ -8,21 +8,38 @@ import co.touchlab.kermit.Logger
  */
 interface Analytics {
     fun track(event: String, props: Map<String, String> = emptyMap())
+    /** The user's choice in Settings. Turns collection on/off at the provider too. */
+    fun setConsent(enabled: Boolean)
 }
 
-/** Where events go once consent is given. Swap for a real provider (needs its API key) in /replica-deploy. */
-fun interface AnalyticsSink {
+/** Where events go once consent is given: Firebase Analytics on Android, the log elsewhere. */
+interface AnalyticsSink {
     fun send(event: String, props: Map<String, String>)
+    /** Provider-level switch (e.g. FirebaseAnalytics.setAnalyticsCollectionEnabled). */
+    fun setEnabled(enabled: Boolean) {}
 }
 
-val LogSink = AnalyticsSink { event, props -> Logger.withTag("Analytics").i { "$event $props" } }
+object LogSink : AnalyticsSink {
+    override fun send(event: String, props: Map<String, String>) {
+        Logger.withTag("Analytics").i { "$event $props" }
+    }
+}
 
 class ConsentingAnalytics(
     private val settings: AppSettings,
     private val sink: AnalyticsSink = LogSink,
 ) : Analytics {
+    init {
+        sink.setEnabled(settings.analyticsEnabled.value)
+    }
+
     override fun track(event: String, props: Map<String, String>) {
         if (settings.analyticsEnabled.value) runCatching { sink.send(event, props) }
+    }
+
+    override fun setConsent(enabled: Boolean) {
+        settings.setAnalytics(enabled)
+        sink.setEnabled(enabled)
     }
 }
 
@@ -37,4 +54,6 @@ object Events {
     const val ONBOARDING_DONE = "onboarding_done"
     const val WIDGET_TOGGLE = "widget_toggle"
     const val NOTIFICATION_DONE = "notification_done"
+    const val SIGNED_IN = "login"            // Firebase's recommended event name
+    const val SYNC_ENABLED = "sync_enabled"
 }

@@ -29,6 +29,7 @@ kotlin {
                 optIn("kotlin.uuid.ExperimentalUuidApi")
                 optIn("androidx.compose.material3.ExperimentalMaterial3Api")
                 optIn("androidx.compose.foundation.ExperimentalFoundationApi")
+                optIn("androidx.compose.foundation.layout.ExperimentalLayoutApi")
             }
         }
         commonMain.dependencies {
