@@ -1,8 +1,15 @@
 package app.ui.detail
 
 import androidx.compose.foundation.background
+import app.ui.text.L
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -70,7 +77,7 @@ fun HabitDetailScreen(
     val hc = habitColors(s.habit.colorKey)
 
     Column(Modifier.fillMaxSize().background(c.bg)) {
-        SheetHeader(s.habit.name, onClose = onClose, onPrimary = onEdit, primaryLabel = "Edit")
+        SheetHeader(s.habit.name, onClose = onClose, onPrimary = onEdit, primaryLabel = L.edit)
         LazyColumn(
             Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = Space.x4, end = Space.x4, bottom = Space.x8),
@@ -79,15 +86,15 @@ fun HabitDetailScreen(
             item {
                 Column {
                     Row(Modifier.fillMaxWidth().padding(start = Space.x4), verticalAlignment = Alignment.CenterVertically) {
-                        Text("Year view", style = AppTheme.type.subhead, color = c.textMuted, modifier = Modifier.weight(1f))
-                        YearArrow(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, "Previous year", s.year > s.minYear, vm::previousYear)
+                        Text(L.yearView, style = AppTheme.type.subhead, color = c.textMuted, modifier = Modifier.weight(1f))
+                        YearArrow(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, L.previousYear, s.year > s.minYear, vm::previousYear)
                         Text("${s.year}", style = AppTheme.type.bodyEmphasis, color = c.accent)
-                        YearArrow(Icons.AutoMirrored.Rounded.KeyboardArrowRight, "Next year", s.year < s.maxYear, vm::nextYear)
+                        YearArrow(Icons.AutoMirrored.Rounded.KeyboardArrowRight, L.nextYear, s.year < s.maxYear, vm::nextYear)
                     }
                     Column(Modifier.fillMaxWidth().clip(Radius.card).background(c.surface).padding(vertical = Space.x3)) {
                         YearHeatmap(s.year, s.yearCells, s.doneThisYear, hc, Modifier.fillMaxWidth())
                         Text(
-                            "${s.doneThisYear} days done in ${s.year}",
+                            L.daysDoneIn(s.doneThisYear, s.year),
                             style = AppTheme.type.footnote, color = c.textMuted,
                             modifier = Modifier.padding(start = Space.x4, top = Space.x2),
                         )
@@ -96,31 +103,31 @@ fun HabitDetailScreen(
             }
             item {
                 GroupedSection {
-                    FormLabelRow("Repeats", Formats.interval(s.habit.interval) +
-                        if (s.habit.dosesPerDay > 1) " · ${s.habit.dosesPerDay}× a day" else "")
+                    FormLabelRow(L.repeats, Formats.interval(s.habit.interval) +
+                        if (s.habit.dosesPerDay > 1) " · ${L.perDay(s.habit.dosesPerDay)}" else "")
                     SectionDivider()
-                    FormLabelRow("Next due", Formats.weekdayDate(s.nextDue))
+                    FormLabelRow(L.nextDue, Formats.weekdayDate(s.nextDue))
                     SectionDivider()
                     Row(Modifier.fillMaxWidth().heightIn(min = Sizes.touchMin).padding(horizontal = Space.x4),
                         verticalAlignment = Alignment.CenterVertically) {
-                        Text("Colour", style = AppTheme.type.body, color = c.text, modifier = Modifier.weight(1f))
+                        Text(L.colour, style = AppTheme.type.body, color = c.text, modifier = Modifier.weight(1f))
                         Box(Modifier.size(Sizes.dot * 2).clip(CircleShape).background(hc.fill).border(Sizes.edge, hc.outline, CircleShape))
                     }
                     SectionDivider()
-                    FormLabelRow("Folder", s.folder?.name ?: "None")
+                    FormLabelRow(L.folder, s.folder?.name ?: L.none)
                 }
             }
             item {
                 GroupedSection {
-                    FormLabelRow("Reminder", Formats.reminderSummary(s.habit.reminder))
+                    FormLabelRow(L.reminder, Formats.reminderSummary(s.habit.reminder))
                     s.nextReminder?.let {
                         SectionDivider()
-                        FormLabelRow("Next reminder", Formats.reminderMoment(it))
+                        FormLabelRow(L.nextReminder, Formats.reminderMoment(it))
                     }
                 }
             }
             item {
-                Text("Entries", style = AppTheme.type.subhead, color = c.textMuted, modifier = Modifier.padding(start = Space.x4))
+                Text(L.entries, style = AppTheme.type.subhead, color = c.textMuted, modifier = Modifier.padding(start = Space.x4))
             }
             item {
                 Row(
@@ -131,17 +138,17 @@ fun HabitDetailScreen(
                 ) {
                     Icon(Icons.Rounded.AddCircle, null, tint = c.accent)
                     Spacer(Modifier.size(Space.x2))
-                    Text("Add entry", style = AppTheme.type.body, color = c.accent)
+                    Text(L.addEntry, style = AppTheme.type.body, color = c.accent)
                 }
             }
             if (s.entries.isEmpty()) {
                 item {
-                    Text("Nothing logged in ${s.year} yet.", style = AppTheme.type.body, color = c.textMuted,
+                    Text(L.nothingLogged(s.year), style = AppTheme.type.body, color = c.textMuted,
                         modifier = Modifier.padding(start = Space.x4))
                 }
             }
             items(s.entries, key = { it.date.toString() }) { entry ->
-                EntryRow(entry, s.habit.dosesPerDay, hc, onClick = { vm.editEntry(entry) })
+                EntryRow(entry, s.habit.dosesPerDay, hc, onClick = { vm.editEntry(entry) }, onDelete = { vm.deleteEntry(entry) })
             }
         }
     }
@@ -163,12 +170,18 @@ private fun YearArrow(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 }
 
 @Composable
-private fun EntryRow(entry: Entry, doses: Int, hc: app.design.HabitColors, onClick: () -> Unit) {
+private fun EntryRow(entry: Entry, doses: Int, hc: app.design.HabitColors, onClick: () -> Unit, onDelete: () -> Unit) {
     val c = AppTheme.colors
     val done = entry.doseCount >= doses
+    var menu by remember { mutableStateOf(false) }
+    // Long-press for a context menu (delete), like the original's Mac context menu.
+    Box {
+    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+        DropdownMenuItem(text = { Text(L.delete, color = c.danger) }, onClick = { menu = false; onDelete() })
+    }
     Row(
         Modifier.fillMaxWidth().clip(Radius.card).background(c.surface)
-            .clickable(role = Role.Button, onClick = onClick)
+            .combinedClickable(role = Role.Button, onClick = onClick, onLongClick = { menu = true }, onLongClickLabel = L.deleteEntry)
             .heightIn(min = Sizes.touchMin).padding(horizontal = Space.x4, vertical = Space.x3),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -181,11 +194,12 @@ private fun EntryRow(entry: Entry, doses: Int, hc: app.design.HabitColors, onCli
             Modifier.size(Sizes.dot * 2.4f).clip(CircleShape)
                 .background(if (done) hc.fill else c.surface)
                 .border(Sizes.edge, if (done) hc.outline else c.borderInput, CircleShape)
-                .semantics { contentDescription = if (done) "done" else if (entry.doseCount > 0) "${entry.doseCount} of $doses" else "note only" },
+                .semantics { contentDescription = if (done) L.stDone else if (entry.doseCount > 0) L.stPartial(entry.doseCount, doses) else L.noteOnly },
             contentAlignment = Alignment.Center,
         ) {
             if (done) Icon(Icons.Rounded.Check, null, tint = hc.onFill, modifier = Modifier.size(Sizes.dot * 1.6f))
             else if (entry.doseCount > 0) Text("${entry.doseCount}", style = AppTheme.type.caption, color = hc.ink)
         }
+    }
     }
 }

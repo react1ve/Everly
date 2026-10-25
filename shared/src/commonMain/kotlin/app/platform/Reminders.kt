@@ -1,6 +1,7 @@
 package app.platform
 
 import app.core.model.Entry
+import app.ui.text.L
 import app.core.model.Habit
 import app.core.schedule.ScheduleEngine
 import app.data.HabitRepository
@@ -82,10 +83,10 @@ class ReminderCoordinator(
     private fun body(at: LocalDateTime, due: kotlinx.datetime.LocalDate): String {
         val days = at.date.daysUntil(due)
         return when {
-            days > 1 -> "Coming up in $days days, on ${Formats.weekdayDate(due)}."
-            days == 1 -> "Due tomorrow."
-            days == 0 -> "Due today. Tap a day in the grid when it's done."
-            else -> "Still waiting since ${Formats.shortDate(due)}. Tick it off when it's done."
+            days > 1 -> L.notifComingUp(days, Formats.weekdayDate(due))
+            days == 1 -> L.notifDueTomorrow
+            days == 0 -> L.notifDueToday
+            else -> L.notifStillWaiting(Formats.shortDate(due))
         }
     }
 

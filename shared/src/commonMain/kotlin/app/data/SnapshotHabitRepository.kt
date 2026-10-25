@@ -167,13 +167,13 @@ class SnapshotHabitRepository(
         val parsed = try {
             this.json.decodeFromString(SnapshotDto.serializer(), json).also {
                 if (it.schemaVersion > SnapshotDto.CURRENT_VERSION) {
-                    throw BackupFormatException("This backup was made by a newer version of the app.")
+                    throw BackupFormatException(BackupFormatException.Reason.NEWER_VERSION)
                 }
             }.toDomain()
         } catch (e: BackupFormatException) {
             throw e
         } catch (e: Exception) {
-            throw BackupFormatException("That file isn't a backup from this app.", e)
+            throw BackupFormatException(BackupFormatException.Reason.NOT_A_BACKUP, e)
         }
         mutate { parsed to Unit }
         return BackupSummary(parsed.habits.size, parsed.folders.size, parsed.entries.size)

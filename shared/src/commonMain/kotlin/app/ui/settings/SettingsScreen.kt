@@ -33,6 +33,17 @@ import app.platform.ReminderCoordinator
 import app.platform.ReminderScheduler
 import app.platform.ThemeMode
 import app.platform.SystemSettings
+import app.platform.Analytics
+import app.platform.Events
+import app.platform.LanguagePref
+import app.ui.text.L
+import app.design.Sizes
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -59,6 +70,7 @@ class SettingsViewModel(
     private val clock: AppClock,
     val appSettings: AppSettings,
     val system: SystemSettings,
+    private val analytics: Analytics,
 ) : ViewModel() {
     private val _state = MutableStateFlow(SettingsUiState())
     val state: StateFlow<SettingsUiState> = _state.asStateFlow()
@@ -81,7 +93,7 @@ class SettingsViewModel(
     fun export() = busy {
         val name = "recurring-backup-${clock.today()}.json"
         val saved = files.save(name, repo.exportBackup())
-        if (saved) "Backup saved." else null
+        if (saved) { analytics.track(Events.BACKUP_EXPORTED); L.backupSaved } else null
     }
 
     fun pickImport() = busy {
@@ -98,9 +110,13 @@ class SettingsViewModel(
             try {
                 val r = repo.importBackup(text)
                 coordinator.rescheduleAll()
-                "Restored ${r.habits} habits and ${r.entries} entries."
+                analytics.track(Events.BACKUP_RESTORED)
+                L.restored(r.habits, r.entries)
             } catch (e: BackupFormatException) {
-                e.message
+                when (e.reason) {
+                    BackupFormatException.Reason.NEWER_VERSION -> L.backupNewer
+                    BackupFormatException.Reason.NOT_A_BACKUP -> L.backupInvalid
+                }
             }
         }
     }
@@ -111,16 +127,21 @@ class SettingsViewModel(
         _state.update { it.copy(confirmDeleteAll = false) }
         repo.deleteAll()
         coordinator.rescheduleAll()
-        "Everything deleted."
+        L.everythingDeleted
     }
 
     fun dismissMessage() = _state.update { it.copy(message = null) }
+
+    fun setLanguage(pref: LanguagePref) {
+        appSettings.setLanguage(pref)
+        viewModelScope.launch { coordinator.rescheduleAll() } // notification texts in the new language
+    }
 
     private fun busy(block: suspend () -> String?) {
         if (_state.value.busy) return
         _state.update { it.copy(busy = true) }
         viewModelScope.launch {
-            val msg = try { block() } catch (e: Exception) { "Something went wrong: ${e.message}" }
+            val msg = try { block() } catch (e: Exception) { L.somethingWrong(e.message ?: e::class.simpleName.orEmpty()) }
             _state.update { it.copy(busy = false, message = msg ?: it.message) }
         }
     }
@@ -131,6 +152,8 @@ class SettingsViewModel(
 fun SettingsScreen(onClose: () -> Unit, onCatalog: () -> Unit, vm: SettingsViewModel = koinViewModel()) {
     val s by vm.state.collectAsStateWithLifecycle()
     val theme by vm.appSettings.theme.collectAsStateWithLifecycle()
+    val language by vm.appSettings.language.collectAsStateWithLifecycle()
+    val analyticsOn by vm.appSettings.analyticsEnabled.collectAsStateWithLifecycle()
     val c = AppTheme.colors
     LifecycleResumeEffect(Unit) {
         vm.refreshPermission()
@@ -138,63 +161,93 @@ fun SettingsScreen(onClose: () -> Unit, onCatalog: () -> Unit, vm: SettingsViewM
     }
 
     Column(Modifier.fillMaxSize().background(c.bg)) {
-        SheetHeader("Settings", onClose = onClose)
+        SheetHeader(L.settings, onClose = onClose)
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = Space.x4),
             verticalArrangement = Arrangement.spacedBy(Space.x6),
         ) {
-            GroupedSection(caption = "Appearance") {
+            GroupedSection(caption = L.appearance) {
                 SegmentedControl(
                     options = ThemeMode.entries,
                     selected = theme,
-                    label = { when (it) { ThemeMode.SYSTEM -> "Auto"; ThemeMode.LIGHT -> "Light"; ThemeMode.DARK -> "Dark" } },
+                    label = { when (it) { ThemeMode.SYSTEM -> L.themeAuto; ThemeMode.LIGHT -> L.themeLight; ThemeMode.DARK -> L.themeDark } },
                     onSelect = vm.appSettings::setTheme,
                 )
             }
 
-            GroupedSection(caption = "Reminders") {
+            GroupedSection(caption = L.language) {
+                SegmentedControl(
+                    options = LanguagePref.entries,
+                    selected = language,
+                    label = {
+                        when (it) {
+                            LanguagePref.SYSTEM -> L.languageAuto
+                            LanguagePref.EN -> "English"
+                            LanguagePref.RU -> "Русский"
+                            LanguagePref.UZ -> "O‘zbek"
+                        }
+                    },
+                    onSelect = vm::setLanguage,
+                )
+            }
+
+            GroupedSection(caption = L.reminders) {
                 when (s.notificationsAllowed) {
-                    true -> FormLabelRow("Notifications", "Allowed")
-                    false -> FormLabelRow("Notifications", "Off — tap to allow", onClick = { vm.askNotifications() })
-                    null -> FormLabelRow("Notifications", "…")
+                    true -> FormLabelRow(L.notifications, L.allowed)
+                    false -> FormLabelRow(L.notifications, L.offTapToAllow, onClick = { vm.askNotifications() })
+                    null -> FormLabelRow(L.notifications, "…")
                 }
                 if (s.notificationsAllowed == false) {
                     SectionDivider()
-                    FormLabelRow("Open notification settings", null, onClick = vm.system::openAppSettings)
+                    FormLabelRow(L.openNotificationSettings, null, onClick = vm.system::openAppSettings)
                 }
                 s.exactAlarms?.let { exact ->
                     SectionDivider()
-                    FormLabelRow("On-time reminders", if (exact) "On" else "Off — tap to allow", onClick = vm.system::openExactAlarmSettings)
+                    FormLabelRow(L.onTimeReminders, if (exact) L.on else L.offTapToAllow, onClick = vm.system::openExactAlarmSettings)
                 }
                 s.batteryExempt?.let { exempt ->
                     SectionDivider()
-                    FormLabelRow("Battery optimisation", if (exempt) "Not restricted" else "Restricted", onClick = vm.system::openBatterySettings)
+                    FormLabelRow(L.batteryOptimisation, if (exempt) L.notRestricted else L.restricted, onClick = vm.system::openBatterySettings)
                 }
             }
             if (s.exactAlarms == false || s.batteryExempt == false) {
                 Text(
-                    "Without on-time reminders they can arrive a few minutes late. Some phones also stop reminders " +
-                        "for apps under battery optimisation — if yours go missing, set this app to “Not optimised”.",
+                    L.batteryHint,
                     style = AppTheme.type.footnote, color = c.textMuted, modifier = Modifier.padding(horizontal = Space.x4),
                 )
             }
 
-            GroupedSection(caption = "Your data") {
-                FormLabelRow("Export a backup", null, onClick = { vm.export() })
+            GroupedSection(caption = L.yourData) {
+                FormLabelRow(L.exportBackup, null, onClick = { vm.export() })
                 SectionDivider()
-                FormLabelRow("Restore from a backup", null, onClick = { vm.pickImport() })
+                FormLabelRow(L.restoreBackup, null, onClick = { vm.pickImport() })
                 SectionDivider()
-                FormLabelRow("Delete everything", null, onClick = { vm.askDeleteAll(true) })
+                FormLabelRow(L.deleteEverything, null, onClick = { vm.askDeleteAll(true) })
             }
             Text(
-                "Everything stays on this device. A backup is a single file you keep — use it to move to a new phone.",
+                L.dataHint,
                 style = AppTheme.type.footnote, color = c.textMuted, modifier = Modifier.padding(horizontal = Space.x4),
             )
 
-            GroupedSection(caption = "About") {
-                FormLabelRow("Version", "0.1.0")
+            GroupedSection {
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = Sizes.touchMin).padding(horizontal = Space.x4),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(L.shareUsage, style = AppTheme.type.body, color = c.text, modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = analyticsOn,
+                        onCheckedChange = vm.appSettings::setAnalytics,
+                        colors = SwitchDefaults.colors(checkedTrackColor = c.success, checkedThumbColor = c.surface),
+                    )
+                }
+            }
+            Text(L.shareUsageHint, style = AppTheme.type.footnote, color = c.textMuted, modifier = Modifier.padding(horizontal = Space.x4))
+
+            GroupedSection(caption = L.about) {
+                FormLabelRow(L.version, "0.1.0")
                 SectionDivider()
-                FormLabelRow("Design catalog", null, onClick = onCatalog)
+                FormLabelRow(L.designCatalog, null, onClick = onCatalog)
             }
         }
     }
@@ -203,25 +256,25 @@ fun SettingsScreen(onClose: () -> Unit, onCatalog: () -> Unit, vm: SettingsViewM
         AlertDialog(
             onDismissRequest = vm::dismissMessage,
             text = { Text(msg) },
-            confirmButton = { TextButton(onClick = vm::dismissMessage) { Text("OK") } },
+            confirmButton = { TextButton(onClick = vm::dismissMessage) { Text(L.ok) } },
         )
     }
     if (s.confirmImport != null) {
         AlertDialog(
             onDismissRequest = { vm.confirmImport(false) },
-            title = { Text("Replace everything?") },
-            text = { Text("Restoring replaces all habits, folders and history on this device with the backup.") },
-            confirmButton = { TextButton(onClick = { vm.confirmImport(true) }) { Text("Restore", color = c.danger) } },
-            dismissButton = { TextButton(onClick = { vm.confirmImport(false) }) { Text("Cancel") } },
+            title = { Text(L.replaceEverything) },
+            text = { Text(L.replaceBody) },
+            confirmButton = { TextButton(onClick = { vm.confirmImport(true) }) { Text(L.restore, color = c.danger) } },
+            dismissButton = { TextButton(onClick = { vm.confirmImport(false) }) { Text(L.cancel) } },
         )
     }
     if (s.confirmDeleteAll) {
         AlertDialog(
             onDismissRequest = { vm.askDeleteAll(false) },
-            title = { Text("Delete everything?") },
-            text = { Text("All habits, folders, notes and reminders on this device. Export a backup first if you might want them back.") },
-            confirmButton = { TextButton(onClick = vm::deleteAll) { Text("Delete", color = c.danger) } },
-            dismissButton = { TextButton(onClick = { vm.askDeleteAll(false) }) { Text("Cancel") } },
+            title = { Text(L.deleteEverythingTitle) },
+            text = { Text(L.deleteEverythingBody) },
+            confirmButton = { TextButton(onClick = vm::deleteAll) { Text(L.delete, color = c.danger) } },
+            dismissButton = { TextButton(onClick = { vm.askDeleteAll(false) }) { Text(L.cancel) } },
         )
     }
 }

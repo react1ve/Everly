@@ -24,6 +24,11 @@ Status words: done = built + verified on device; partial = built, something miss
 | 2026-10-25 | S09 Widget | partial | Android Glance "Today" widget: due/overdue/partial first, tap a square to check off, refreshed on every data change + every 30 min. **iOS WidgetKit not built** (needs a Swift extension target + App Group storage; next). | — |
 | 2026-10-25 | S01 Grid | partial | + now-line through today's column. | — |
 | 2026-10-25 | Android finish | partial | Notification "Done" action (markDone, idempotent) + tap opens the habit (DeepLinks); Settings rows for exact alarms + battery optimisation (SystemSettings, re-checked on resume); drag-handle reorder in Organise with haptics; haptic tick on check-off; widget sizes (small/medium/tall) + "N to do"; placeholder adaptive launcher icon; release build with R8 + resource shrinking. 13 repo tests. Not yet built on device. | Reviewer caught a wrong `zIndex` import before sync. |
+| 2026-10-25 | L10n | done (code) | `Strings` (EN/RU/UZ, 172 keys) used by UI, view models, notifications and the Android widget; Russian plural rules; in-app language picker (Phone/EN/RU/UZ), language change rebuilds screens and re-texts pending reminders. StringsTest added. | Notification text is produced outside Compose, so Compose resources weren't a fit. |
+| 2026-10-25 | S11 Onboarding | done (code) | 3 steps (what it's for, late is fine, pick starters + reminder opt-in); shown once. | — |
+| 2026-10-25 | Analytics | partial | `Analytics` interface, opt-in (off by default) toggle in Settings, events wired (habit created, day toggled, note, reminder on, folder, backup, onboarding, widget, notification Done). Sink logs locally until a provider key is chosen. | — |
+| 2026-10-25 | S02 | done (code) | Long-press an entry → Delete. | — |
+| 2026-10-25 | Matrix | — | All features implemented on Android marked `yes` (+ "device test pending" until test results arrive). Open: lock-screen widget (iOS), cross-device sync, desktop, analytics provider. | Reviewer caught a misplaced brace in Koin.kt and a wrong Kermit call before sync. |
 
 Deviations from architecture.md
 - Modules: `:shared:data/ui/platform` are packages inside `:shared` for now. `:core` is a separate module because the iOS widget needs to link it without Compose.

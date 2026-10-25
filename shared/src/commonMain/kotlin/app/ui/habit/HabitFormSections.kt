@@ -1,6 +1,7 @@
 package app.ui.habit
 
 import androidx.compose.foundation.clickable
+import app.ui.text.L
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -46,23 +47,23 @@ fun FolderPickerSection(
     var naming by remember { mutableStateOf(false) }
     val current = folders.firstOrNull { it.id == selectedId }
 
-    GroupedSection(caption = "Folder") {
+    GroupedSection(caption = L.folder) {
         Box {
-            FormLabelRow("Folder", current?.name ?: "None", onClick = { open = true })
+            FormLabelRow(L.folder, current?.name ?: L.none, onClick = { open = true })
             DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-                DropdownMenuItem(text = { Text("None") }, onClick = { onSelect(null); open = false })
+                DropdownMenuItem(text = { Text(L.none) }, onClick = { onSelect(null); open = false })
                 folders.forEach { f ->
                     DropdownMenuItem(text = { Text(f.name) }, onClick = { onSelect(f.id); open = false })
                 }
-                DropdownMenuItem(text = { Text("New folder…", color = AppTheme.colors.accent) }, onClick = { open = false; naming = true })
+                DropdownMenuItem(text = { Text(L.newFolderEllipsis, color = AppTheme.colors.accent) }, onClick = { open = false; naming = true })
             }
         }
     }
 
     if (naming) {
         NameDialog(
-            title = "New folder",
-            confirm = "Create",
+            title = L.newFolder,
+            confirm = L.create,
             onConfirm = { onCreate(it); naming = false },
             onDismiss = { naming = false },
         )
@@ -76,10 +77,10 @@ fun NameDialog(title: String, confirm: String, initial: String = "", onConfirm: 
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            OutlinedTextField(text, { text = it.take(60) }, singleLine = true, placeholder = { Text("e.g. Pets") })
+            OutlinedTextField(text, { text = it.take(60) }, singleLine = true, placeholder = { Text(L.folderExample) })
         },
         confirmButton = { TextButton(onClick = { onConfirm(text.trim()) }, enabled = text.isNotBlank()) { Text(confirm) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(L.cancel) } },
     )
 }
 
@@ -96,12 +97,12 @@ fun ReminderSection(
     var pickTime by remember { mutableStateOf(false) }
     var pickBefore by remember { mutableStateOf(false) }
 
-    GroupedSection(caption = "Reminder") {
+    GroupedSection(caption = L.reminder) {
         Row(
             Modifier.fillMaxWidth().heightIn(min = Sizes.touchMin).padding(horizontal = Space.x4),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Remind me", style = AppTheme.type.body, color = c.text, modifier = Modifier.weight(1f))
+            Text(L.remindMe, style = AppTheme.type.body, color = c.text, modifier = Modifier.weight(1f))
             Switch(
                 checked = s.reminder.enabled,
                 onCheckedChange = onEnabled,
@@ -113,11 +114,11 @@ fun ReminderSection(
             Row(
                 Modifier.fillMaxWidth().heightIn(min = Sizes.touchMin)
                     .clickable(role = Role.Button) { pickTime = true }
-                    .semantics { contentDescription = "Reminder time ${Formats.time(s.reminder.minuteOfDay)}" }
+                    .semantics { contentDescription = L.reminderTimeA11y(Formats.time(s.reminder.minuteOfDay)) }
                     .padding(horizontal = Space.x4),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Time", style = AppTheme.type.body, color = c.text, modifier = Modifier.weight(1f))
+                Text(L.time, style = AppTheme.type.body, color = c.text, modifier = Modifier.weight(1f))
                 Box(Modifier.padding(vertical = Space.x2)) {
                     Text(
                         Formats.time(s.reminder.minuteOfDay),
@@ -128,7 +129,7 @@ fun ReminderSection(
             }
             SectionDivider()
             Box {
-                FormLabelRow("When", Formats.daysBefore(s.reminder.daysBefore), onClick = { pickBefore = true })
+                FormLabelRow(L.whenLabel, Formats.daysBefore(s.reminder.daysBefore), onClick = { pickBefore = true })
                 DropdownMenu(expanded = pickBefore, onDismissRequest = { pickBefore = false }) {
                     DAYS_BEFORE_OPTIONS.forEach { d ->
                         DropdownMenuItem(text = { Text(Formats.daysBefore(d)) }, onClick = { onDaysBefore(d); pickBefore = false })
@@ -136,10 +137,10 @@ fun ReminderSection(
                 }
             }
             SectionDivider()
-            FormLabelRow("Next reminder", s.nextReminder?.let(Formats::reminderMoment) ?: "—")
+            FormLabelRow(L.nextReminder, s.nextReminder?.let(Formats::reminderMoment) ?: "—")
             if (s.notificationsAllowed == false) {
                 Text(
-                    "Notifications are off for this app, so reminders won't show. Turn them on in your phone's settings.",
+                    L.notificationsOffWarning,
                     style = AppTheme.type.footnote, color = c.danger,
                     modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x2),
                 )
@@ -155,10 +156,10 @@ fun ReminderSection(
         )
         AlertDialog(
             onDismissRequest = { pickTime = false },
-            title = { Text("Reminder time") },
+            title = { Text(L.reminderTimeTitle) },
             text = { TimePicker(state = state) },
-            confirmButton = { TextButton(onClick = { onTime(state.hour, state.minute); pickTime = false }) { Text("OK") } },
-            dismissButton = { TextButton(onClick = { pickTime = false }) { Text("Cancel") } },
+            confirmButton = { TextButton(onClick = { onTime(state.hour, state.minute); pickTime = false }) { Text(L.ok) } },
+            dismissButton = { TextButton(onClick = { pickTime = false }) { Text(L.cancel) } },
         )
     }
 }

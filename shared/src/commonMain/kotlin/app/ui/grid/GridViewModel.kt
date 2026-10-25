@@ -1,6 +1,7 @@
 package app.ui.grid
 
 import androidx.lifecycle.ViewModel
+import app.ui.text.L
 import androidx.lifecycle.viewModelScope
 import app.core.model.Folder
 import app.core.model.Habit
@@ -11,6 +12,8 @@ import app.core.schedule.ScheduleEngine
 import app.data.HabitDraft
 import app.data.HabitRepository
 import app.platform.AppClock
+import app.platform.Analytics
+import app.platform.Events
 import app.ui.entry.EntryEditor
 import app.ui.text.Formats
 import kotlinx.coroutines.Dispatchers
@@ -53,9 +56,10 @@ sealed interface GridUiState {
 class GridViewModel(
     private val repo: HabitRepository,
     private val clock: AppClock,
+    private val analytics: Analytics,
 ) : ViewModel() {
 
-    val entryEditor = EntryEditor(repo, viewModelScope)
+    val entryEditor = EntryEditor(repo, viewModelScope, analytics)
 
     val state: StateFlow<GridUiState> =
         combine(repo.habits, repo.entries, repo.folders, clock.todayFlow) { habits, entries, folders, today ->
@@ -90,6 +94,7 @@ class GridViewModel(
     fun toggle(habitId: String, date: LocalDate) {
         if (date > clock.today()) return // future days are not checkable
         viewModelScope.launch { repo.toggleDay(habitId, date) }
+        analytics.track(Events.DAY_TOGGLED, mapOf("source" to "grid"))
     }
 
     fun openNote(habitId: String, date: LocalDate) {
@@ -106,7 +111,7 @@ class GridViewModel(
         viewModelScope.launch {
             repo.createHabit(
                 HabitDraft(
-                    name = template.habitName,
+                    name = L.templates[template.ordinal].second,
                     interval = Interval(template.count, template.unit),
                     colorKey = template.colorKey,
                     anchorDate = clock.today(),
@@ -115,10 +120,11 @@ class GridViewModel(
         }
     }
 
-    enum class Template(val label: String, val habitName: String, val count: Int, val unit: IntervalUnit, val colorKey: String) {
-        VITAMIN("Daily vitamin", "💊 Vitamin", 1, IntervalUnit.DAY, "yellow"),
-        SHEETS("Fresh bed sheets · every 2 weeks", "🛏️ Change bed sheets", 2, IntervalUnit.WEEK, "mint"),
-        INSURANCE("Car insurance · yearly", "🚗 Renew car insurance", 1, IntervalUnit.YEAR, "indigo"),
+    /** Starter habits (labels and names live in [app.ui.text.Strings.templates], same order). */
+    enum class Template(val count: Int, val unit: IntervalUnit, val colorKey: String) {
+        VITAMIN(1, IntervalUnit.DAY, "yellow"),
+        SHEETS(2, IntervalUnit.WEEK, "mint"),
+        INSURANCE(1, IntervalUnit.YEAR, "indigo"),
     }
 
     companion object {

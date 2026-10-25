@@ -1,6 +1,7 @@
 package app.ui.organize
 
 import androidx.compose.foundation.background
+import app.ui.text.L
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -106,7 +107,7 @@ fun OrganizeScreen(
 
     Column(Modifier.fillMaxSize().background(c.bg)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            SheetHeader("Organise", onClose = onClose, modifier = Modifier.weight(1f))
+            SheetHeader(L.organise, onClose = onClose, modifier = Modifier.weight(1f))
         }
         LazyColumn(
             Modifier.fillMaxSize(),
@@ -122,7 +123,7 @@ fun OrganizeScreen(
                 ) {
                     Icon(Icons.Rounded.CreateNewFolder, null, tint = c.accent)
                     Spacer(Modifier.width(Space.x2))
-                    Text("New folder", style = AppTheme.type.body, color = c.accent)
+                    Text(L.newFolder, style = AppTheme.type.body, color = c.accent)
                 }
             }
             sections.forEachIndexed { index, section ->
@@ -163,19 +164,19 @@ private fun Section(
                 Spacer(Modifier.width(Space.x2))
             }
             Text(
-                folder?.name ?: "No folder",
+                folder?.name ?: L.noFolder,
                 style = AppTheme.type.subhead.copy(fontWeight = FontWeight.SemiBold), color = c.textMuted,
                 modifier = Modifier.weight(1f),
             )
             if (folder != null) {
-                SmallIcon(Icons.Rounded.KeyboardArrowUp, "Move folder up", canMoveUp) { onShiftFolder(-1) }
-                SmallIcon(Icons.Rounded.KeyboardArrowDown, "Move folder down", canMoveDown) { onShiftFolder(1) }
-                SmallIcon(Icons.Rounded.Edit, "Edit folder", true, onEditFolder)
+                SmallIcon(Icons.Rounded.KeyboardArrowUp, L.moveFolderUp, canMoveUp) { onShiftFolder(-1) }
+                SmallIcon(Icons.Rounded.KeyboardArrowDown, L.moveFolderDown, canMoveDown) { onShiftFolder(1) }
+                SmallIcon(Icons.Rounded.Edit, L.editFolder, true, onEditFolder)
             }
         }
         Column(Modifier.fillMaxWidth().clip(Radius.card).background(c.surface)) {
             if (section.habits.isEmpty()) {
-                Text("Empty", style = AppTheme.type.body, color = c.textMuted, modifier = Modifier.padding(Space.x4))
+                Text(L.empty, style = AppTheme.type.body, color = c.textMuted, modifier = Modifier.padding(Space.x4))
             }
             ReorderableHabits(section.habits, folders, onShiftHabit, onMove)
         }
@@ -258,9 +259,9 @@ private fun HabitLine(
         modifier.fillMaxWidth().height(Sizes.gridRow).background(c.surface).padding(start = Space.x4)
             .semantics {
                 customActions = buildList {
-                    if (canUp) add(CustomAccessibilityAction("Move up") { onShift(h, -1); true })
-                    if (canDown) add(CustomAccessibilityAction("Move down") { onShift(h, 1); true })
-                    add(CustomAccessibilityAction("Move to folder") { menu = true; true })
+                    if (canUp) add(CustomAccessibilityAction(L.moveUp) { onShift(h, -1); true })
+                    if (canDown) add(CustomAccessibilityAction(L.moveDown) { onShift(h, 1); true })
+                    add(CustomAccessibilityAction(L.moveToFolder) { menu = true; true })
                 }
             },
         verticalAlignment = Alignment.CenterVertically,
@@ -269,18 +270,18 @@ private fun HabitLine(
         Spacer(Modifier.width(Space.x3))
         Text(h.name, style = AppTheme.type.body, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         Box {
-            SmallIcon(Icons.Rounded.DriveFileMove, "Move to folder", true) { menu = true }
+            SmallIcon(Icons.Rounded.DriveFileMove, L.moveToFolder, true) { menu = true }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                DropdownMenuItem(text = { Text("No folder") }, onClick = { onMove(h, null); menu = false })
+                DropdownMenuItem(text = { Text(L.noFolder) }, onClick = { onMove(h, null); menu = false })
                 folders.forEach { f ->
                     DropdownMenuItem(text = { Text(f.name) }, onClick = { onMove(h, f.id); menu = false })
                 }
             }
         }
-        SmallIcon(Icons.Rounded.KeyboardArrowUp, "Move up", canUp) { onShift(h, -1) }
-        SmallIcon(Icons.Rounded.KeyboardArrowDown, "Move down", canDown) { onShift(h, 1) }
+        SmallIcon(Icons.Rounded.KeyboardArrowUp, L.moveUp, canUp) { onShift(h, -1) }
+        SmallIcon(Icons.Rounded.KeyboardArrowDown, L.moveDown, canDown) { onShift(h, 1) }
         Box(
-            handleModifier.size(Sizes.touchMin).semantics { contentDescription = "Drag to reorder" },
+            handleModifier.size(Sizes.touchMin).semantics { contentDescription = L.dragToReorder },
             contentAlignment = Alignment.Center,
         ) { Icon(Icons.Rounded.DragHandle, null, tint = c.textMuted) }
     }

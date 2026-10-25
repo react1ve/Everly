@@ -1,6 +1,7 @@
 package app.design.components
 
 import androidx.compose.foundation.background
+import app.ui.text.L
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -54,7 +55,7 @@ fun SheetHeader(
         modifier.fillMaxWidth().padding(horizontal = Space.x4, vertical = Space.x3),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CircleIconButton(Icons.Rounded.Close, "Close", onClose)
+        CircleIconButton(Icons.Rounded.Close, L.close, onClose)
         Text(title, style = AppTheme.type.title, color = c.text, textAlign = TextAlign.Center, maxLines = 1,
             modifier = Modifier.weight(1f).padding(horizontal = Space.x2))
         when {
@@ -64,7 +65,7 @@ fun SheetHeader(
                 Modifier.size(Sizes.touchMin).clip(CircleShape)
                     .background(if (primaryEnabled) c.accent else c.accent.copy(alpha = 0.4f))
                     .clickable(enabled = primaryEnabled, role = Role.Button, onClick = onPrimary)
-                    .semantics { contentDescription = "Save" },
+                    .semantics { contentDescription = L.save },
                 contentAlignment = Alignment.Center,
             ) { Icon(Icons.Rounded.Check, null, tint = c.onAccent) }
         }
@@ -142,9 +143,9 @@ fun NumberStepper(
         Spacer(Modifier.width(Space.x2))
         Text(unit, style = AppTheme.type.body, color = c.textMuted, modifier = Modifier.weight(1f))
         Row(Modifier.clip(Radius.pill).background(c.surfaceRaised)) {
-            StepButton("−", "Decrease", value > range.first) { onChange(value - 1) }
+            StepButton("−", L.decrease, value > range.first) { onChange(value - 1) }
             Box(Modifier.width(Sizes.edge).height(Space.x6).align(Alignment.CenterVertically).background(c.border))
-            StepButton("+", "Increase", value < range.last) { onChange(value + 1) }
+            StepButton("+", L.increase, value < range.last) { onChange(value + 1) }
         }
     }
 }

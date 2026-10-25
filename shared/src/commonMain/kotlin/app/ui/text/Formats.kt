@@ -3,97 +3,73 @@ package app.ui.text
 import app.core.model.Habit
 import app.core.model.Interval
 import app.core.model.IntervalUnit
+import app.core.model.ReminderSettings
 import app.core.schedule.Cell
 import app.core.schedule.CellState
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
-import app.core.model.ReminderSettings
 import kotlinx.datetime.daysUntil
 
-/**
- * All user-facing wording in one place, written fresh for this app (not the original's strings).
- * English only for now; moves to Compose resources when localisation lands (M4).
- */
+/** Formatting helpers on top of the active [Strings] (see [Lang]). */
 object Formats {
-    private val monthsShort = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-    private val monthsLong = listOf("January", "February", "March", "April", "May", "June", "July", "August",
-        "September", "October", "November", "December")
+    fun monthLong(date: LocalDate) = L.monthsLong[date.month.ordinal]
+    fun shortDate(date: LocalDate) = L.shortDate(date.day, date.month.ordinal)
+    fun weekdayDate(date: LocalDate) = L.weekdayDate(date.dayOfWeek.ordinal, date.day, date.month.ordinal)
+    fun longDate(date: LocalDate) = L.longDate(date.dayOfWeek.ordinal, date.day, date.month.ordinal, date.year)
+    fun weekdayShort(day: DayOfWeek) = L.weekdaysShort[day.ordinal]
+    fun isWeekend(day: DayOfWeek) = day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY
 
-    fun monthLong(date: LocalDate) = monthsLong[date.month.ordinal]
-    fun shortDate(date: LocalDate) = "${monthsShort[date.month.ordinal]} ${date.day}"
-
-    fun weekdayDate(date: LocalDate) = "${weekdayShort(date.dayOfWeek)}, ${shortDate(date)}"
-    fun longDate(date: LocalDate) =
-        "${weekdayLong(date.dayOfWeek)}, ${monthsLong[date.month.ordinal]} ${date.day}, ${date.year}"
-    fun weekdayLong(day: DayOfWeek) = day.name.lowercase().replaceFirstChar { it.uppercase() }
-
-    /** 24-hour "09:00". A 12/24h setting can come later. */
+    /** 24-hour "09:00". */
     fun time(minuteOfDay: Int): String {
         val h = minuteOfDay / 60; val m = minuteOfDay % 60
         return "${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}"
     }
     fun time(t: LocalDateTime) = time(t.hour * 60 + t.minute)
-    fun reminderMoment(t: LocalDateTime) = "${weekdayDate(t.date)} at ${time(t)}"
+    fun reminderMoment(t: LocalDateTime) = L.at(weekdayDate(t.date), time(t))
 
-    fun daysBefore(n: Int) = when (n) { 0 -> "On the day"; 1 -> "1 day before"; else -> "$n days before" }
-
+    fun daysBefore(n: Int) = L.daysBefore(n)
     fun reminderSummary(r: ReminderSettings) =
-        if (!r.enabled) "Off" else "${time(r.minuteOfDay)} · ${daysBefore(r.daysBefore).lowercase()}"
+        if (!r.enabled) L.off else "${time(r.minuteOfDay)} · ${daysBefore(r.daysBefore).lowercase()}"
 
-    fun weekdayShort(day: DayOfWeek) = when (day) {
-        DayOfWeek.MONDAY -> "Mon"; DayOfWeek.TUESDAY -> "Tue"; DayOfWeek.WEDNESDAY -> "Wed"
-        DayOfWeek.THURSDAY -> "Thu"; DayOfWeek.FRIDAY -> "Fri"; DayOfWeek.SATURDAY -> "Sat"
-        DayOfWeek.SUNDAY -> "Sun"
-    }
-
-    fun isWeekend(day: DayOfWeek) = day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY
-
-    fun unitLabel(unit: IntervalUnit, count: Int): String {
-        val one = when (unit) {
-            IntervalUnit.DAY -> "day"; IntervalUnit.WEEK -> "week"
-            IntervalUnit.MONTH -> "month"; IntervalUnit.YEAR -> "year"
-        }
-        return if (count == 1) one else one + "s"
-    }
+    fun unitLabel(unit: IntervalUnit, count: Int) = L.unitCount(unit, count)
 
     fun interval(i: Interval): String = when {
-        i.isDaily -> "daily"
+        i.isDaily -> L.daily
         i.count == 1 -> when (i.unit) {
-            IntervalUnit.WEEK -> "weekly"; IntervalUnit.MONTH -> "monthly"; IntervalUnit.YEAR -> "yearly"
-            IntervalUnit.DAY -> "daily"
+            IntervalUnit.DAY -> L.daily; IntervalUnit.WEEK -> L.weekly
+            IntervalUnit.MONTH -> L.monthly; IntervalUnit.YEAR -> L.yearly
         }
-        else -> "every ${i.count} ${unitLabel(i.unit, i.count)}"
+        else -> L.every(i.count, i.unit)
     }
 
-    /** Row subtitle: "every 3 days · due Oct 18", "2× a day", "overdue 3 days". */
+    /** Row subtitle, e.g. "every 3 days · due Oct 18", "2× a day", "overdue 3 days". */
     fun habitSubtitle(habit: Habit, nextDue: LocalDate, today: LocalDate): String {
-        val rhythm = if (habit.dosesPerDay > 1) "${habit.dosesPerDay}× a day" else interval(habit.interval)
+        val rhythm = if (habit.dosesPerDay > 1) L.perDay(habit.dosesPerDay) else interval(habit.interval)
         if (habit.interval.isDaily) return rhythm
         val lateBy = nextDue.daysUntil(today)
         val due = when {
-            lateBy > 0 -> "overdue $lateBy ${unitLabel(IntervalUnit.DAY, lateBy)}"
-            lateBy == 0 -> "due today"
-            lateBy == -1 -> "due tomorrow"
-            else -> "due ${shortDate(nextDue)}"
+            lateBy > 0 -> L.overdueDays(lateBy)
+            lateBy == 0 -> L.dueToday
+            lateBy == -1 -> L.dueTomorrow
+            else -> L.dueOn(shortDate(nextDue))
         }
         return "$rhythm · $due"
     }
 
     fun cellStateWords(cell: Cell): String = when (cell.state) {
-        CellState.DONE -> "done"
-        CellState.PARTIAL -> "${cell.doseCount} of ${cell.dosesPerDay} done"
-        CellState.COVERED -> "not needed, covered by the last time"
-        CellState.DUE -> "due"
-        CellState.OVERDUE -> "overdue"
-        CellState.IDLE -> "nothing due"
+        CellState.DONE -> L.stDone
+        CellState.PARTIAL -> L.stPartial(cell.doseCount, cell.dosesPerDay)
+        CellState.COVERED -> L.stCovered
+        CellState.DUE -> L.stDue
+        CellState.OVERDUE -> L.stOverdue
+        CellState.IDLE -> L.stIdle
     }
 
     fun cellDescription(habitName: String, cell: Cell): String = buildString {
-        append(habitName).append(", ")
-        append(weekdayShort(cell.date.dayOfWeek)).append(' ').append(shortDate(cell.date))
-        if (cell.isToday) append(", today")
-        if (cell.hasNote) append(", has a note")
-        if (cell.isReminderDay) append(", reminder set")
+        append(habitName).append(", ").append(weekdayDate(cell.date))
+        if (cell.isToday) append(", ").append(L.cToday)
+        if (cell.hasNote) append(", ").append(L.cHasNote)
+        if (cell.isReminderDay) append(", ").append(L.cReminder)
     }
 }

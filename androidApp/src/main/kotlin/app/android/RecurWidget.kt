@@ -45,6 +45,9 @@ import app.design.LightAppColors
 import app.platform.AppClock
 import app.platform.WidgetItem
 import app.platform.WidgetSnapshot
+import app.platform.Analytics
+import app.platform.Events
+import app.ui.text.L
 import kotlinx.coroutines.flow.first
 import org.koin.core.context.GlobalContext
 
@@ -90,6 +93,7 @@ class ToggleTodayAction : ActionCallback {
         val id = parameters[HabitIdKey] ?: return
         val koin = GlobalContext.get()
         koin.get<HabitRepository>().toggleDay(id, koin.get<AppClock>().today())
+        koin.get<Analytics>().track(Events.WIDGET_TOGGLE)
         RecurWidget().update(context, glanceId)
     }
 }
@@ -112,19 +116,19 @@ private fun WidgetContent(items: List<WidgetItem>, openCount: Int, hasHabits: Bo
             .clickable(actionStartActivity<MainActivity>()),
     ) {
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("Today", style = TextStyle(color = text, fontSize = 15.sp, fontWeight = FontWeight.Bold))
+            Text(L.today, style = TextStyle(color = text, fontSize = 15.sp, fontWeight = FontWeight.Bold))
             if (openCount > 0) {
                 Spacer(GlanceModifier.width(6.dp))
-                Text("$openCount to do", style = TextStyle(color = muted, fontSize = 12.sp))
+                Text(L.toDo(openCount), style = TextStyle(color = muted, fontSize = 12.sp))
             }
         }
         Spacer(GlanceModifier.height(6.dp))
         when {
-            !hasHabits -> Text("Add a habit in the app to see it here.", style = TextStyle(color = muted, fontSize = 13.sp))
-            items.isEmpty() -> Text("Nothing due today.", style = TextStyle(color = muted, fontSize = 13.sp))
+            !hasHabits -> Text(L.widgetAddHabit, style = TextStyle(color = muted, fontSize = 13.sp))
+            items.isEmpty() -> Text(L.nothingDueToday, style = TextStyle(color = muted, fontSize = 13.sp))
             else -> {
                 if (allDone) {
-                    Text("All caught up today.", style = TextStyle(color = muted, fontSize = 13.sp))
+                    Text(L.allCaughtUp, style = TextStyle(color = muted, fontSize = 13.sp))
                     Spacer(GlanceModifier.height(4.dp))
                 }
                 items.forEach { item -> WidgetRow(item, text) }

@@ -1,6 +1,7 @@
 package app.ui.grid
 
 import androidx.compose.foundation.background
+import app.ui.text.L
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.animation.core.animateFloatAsState
@@ -261,7 +262,7 @@ private fun HabitRow(
             Modifier.width(Sizes.habitColumn - Space.x1).fillMaxHeight().padding(vertical = Space.x1)
                 .clip(Radius.md).background(hc.row)
                 .clickable(role = Role.Button) { onOpenHabit(row.habit.id) }
-                .semantics { contentDescription = "${row.habit.name}, ${row.subtitle}. Opens details" }
+                .semantics { contentDescription = "${row.habit.name}, ${row.subtitle}. ${L.opensDetails}" }
                 .padding(start = Space.x3, end = Space.x1),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -306,12 +307,12 @@ private fun FolderHeader(item: GridItem.FolderHeader, onToggle: (Folder) -> Unit
                 role = Role.Button,
                 onClick = { onToggle(item.folder) },
                 onLongClick = { onEdit(item.folder.id) },
-                onLongClickLabel = "Edit folder",
+                onLongClickLabel = L.editFolder,
             )
             .semantics {
                 heading()
-                contentDescription = "${item.folder.name}, ${item.count} habits"
-                stateDescription = if (item.folder.collapsed) "collapsed" else "expanded"
+                contentDescription = "${item.folder.name}, ${L.habitsCount(item.count)}"
+                stateDescription = if (item.folder.collapsed) L.collapsed else L.expanded
             }
             .padding(start = Space.x3, top = Space.x4, bottom = Space.x1),
     ) {
@@ -343,18 +344,18 @@ private fun BottomActionBar(
             Box(
                 Modifier.shadow(Space.x2, Radius.pill).clip(Radius.pill).background(c.surfaceRaised)
                     .clickable(role = Role.Button, onClick = onToday)
-                    .semantics { contentDescription = "Scroll to today" }
+                    .semantics { contentDescription = L.scrollToToday }
                     .padding(horizontal = Space.x5, vertical = Space.x3),
-            ) { Text("Today", style = AppTheme.type.bodyEmphasis, color = c.text) }
+            ) { Text(L.today, style = AppTheme.type.bodyEmphasis, color = c.text) }
         }
         Spacer(Modifier.weight(1f))
         Row(
             Modifier.shadow(Space.x2, Radius.pill).clip(Radius.pill).background(c.surfaceRaised).padding(horizontal = Space.x1),
             horizontalArrangement = Arrangement.spacedBy(Space.x1),
         ) {
-            BarIcon(Icons.Rounded.Add, "New habit", onNewHabit)
-            BarIcon(Icons.Rounded.SwapVert, "Organise habits", onOrganize)
-            BarIcon(Icons.Rounded.Settings, "Settings", onSettings)
+            BarIcon(Icons.Rounded.Add, L.newHabit, onNewHabit)
+            BarIcon(Icons.Rounded.SwapVert, L.organiseHabits, onOrganize)
+            BarIcon(Icons.Rounded.Settings, L.settings, onSettings)
         }
     }
 }
@@ -378,21 +379,20 @@ private fun EmptyGrid(onNewHabit: () -> Unit, onTemplate: (GridViewModel.Templat
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("Nothing repeating yet", style = AppTheme.type.display.copy(fontWeight = FontWeight.Bold), color = c.text,
+        Text(L.emptyTitle, style = AppTheme.type.display.copy(fontWeight = FontWeight.Bold), color = c.text,
             modifier = Modifier.semantics { heading() })
         Spacer(Modifier.height(Space.x3))
         Text(
-            "Add the things that come round — a pill, a filter, an insurance renewal. " +
-                "Check them off and the next date works itself out.",
+            L.emptyBody,
             style = AppTheme.type.body, color = c.textMuted,
         )
         Spacer(Modifier.height(Space.x6))
-        PillButton("Add your first", onNewHabit, Modifier.fillMaxWidth())
+        PillButton(L.addFirst, onNewHabit, Modifier.fillMaxWidth())
         Spacer(Modifier.height(Space.x5))
-        Text("Or start from one of these", style = AppTheme.type.subhead, color = c.textMuted)
+        Text(L.orStartFrom, style = AppTheme.type.subhead, color = c.textMuted)
         Spacer(Modifier.height(Space.x2))
         GridViewModel.Template.entries.forEach { t ->
-            PillButton(t.label, { onTemplate(t) }, Modifier.fillMaxWidth().padding(vertical = Space.x1), kind = ButtonKind.SECONDARY)
+            PillButton(L.templates[t.ordinal].first, { onTemplate(t) }, Modifier.fillMaxWidth().padding(vertical = Space.x1), kind = ButtonKind.SECONDARY)
         }
     }
 }

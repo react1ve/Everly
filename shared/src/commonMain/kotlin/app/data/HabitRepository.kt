@@ -63,4 +63,6 @@ interface HabitRepository {
 }
 
 data class BackupSummary(val habits: Int, val folders: Int, val entries: Int)
-class BackupFormatException(message: String, cause: Throwable? = null) : Exception(message, cause)
+class BackupFormatException(val reason: Reason, cause: Throwable? = null) : Exception(reason.name, cause) {
+    enum class Reason { NEWER_VERSION, NOT_A_BACKUP }
+}

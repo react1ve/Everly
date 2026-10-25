@@ -23,6 +23,9 @@ import app.ui.settings.SettingsScreen
 import app.platform.AppSettings
 import app.platform.ThemeMode
 import app.platform.DeepLinks
+import app.ui.onboarding.OnboardingScreen
+import androidx.compose.runtime.key
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
@@ -42,13 +45,26 @@ import kotlinx.serialization.Serializable
 
 @Composable
 fun App() {
-    val themeMode by koinInject<AppSettings>().theme.collectAsState()
+    val appSettings = koinInject<AppSettings>()
+    val themeMode by appSettings.theme.collectAsState()
+    val language by appSettings.language.collectAsState()
+    val onboarded by appSettings.onboarded.collectAsState()
+    // Following the phone's language: pick up a change made while the app was in the background.
+    LifecycleResumeEffect(Unit) {
+        appSettings.applyLanguage()
+        onPauseOrDispose { }
+    }
     val dark = when (themeMode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
     AppTheme(dark = dark) {
+      if (!onboarded) {
+        Box(Modifier.fillMaxSize().background(AppTheme.colors.bg).windowInsetsPadding(WindowInsets.safeDrawing)) {
+            OnboardingScreen()
+        }
+      } else key(language) { // new language = fresh screens and view models, so every label is re-read
         val nav = rememberNavController()
         val linkedHabit by DeepLinks.habitId.collectAsState()
         LaunchedEffect(linkedHabit) {
@@ -91,5 +107,6 @@ fun App() {
                 composable<CatalogRoute> { DesignCatalogScreen(onClose = { nav.popBackStack() }) }
             }
         }
+      }
     }
 }

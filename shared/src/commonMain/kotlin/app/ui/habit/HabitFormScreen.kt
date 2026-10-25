@@ -1,6 +1,7 @@
 package app.ui.habit
 
 import androidx.compose.foundation.background
+import app.ui.text.L
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -56,7 +57,7 @@ fun HabitFormScreen(
 
     Column(Modifier.fillMaxSize().background(c.bg).imePadding()) {
         SheetHeader(
-            title = if (s.isNew) "New habit" else "Edit habit",
+            title = if (s.isNew) L.newHabitTitle else L.editHabitTitle,
             onClose = onClose,
             onPrimary = vm::save,
             primaryEnabled = s.canSave && s.loaded,
@@ -72,7 +73,7 @@ fun HabitFormScreen(
                 TextField(
                     value = s.name,
                     onValueChange = vm::setName,
-                    placeholder = { Text("What comes round? e.g. 🦷 Dentist", color = c.textMuted) },
+                    placeholder = { Text(L.namePlaceholder, color = c.textMuted) },
                     singleLine = true,
                     isError = s.showNameError,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
@@ -87,24 +88,24 @@ fun HabitFormScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (s.showNameError) {
-                    Text("Give it a name", style = AppTheme.type.footnote, color = c.danger,
+                    Text(L.nameError, style = AppTheme.type.footnote, color = c.danger,
                         modifier = Modifier.padding(horizontal = Space.x4, vertical = Space.x2))
                 }
             }
 
-            GroupedSection(caption = "Repeats every") {
+            GroupedSection(caption = L.repeatsEvery) {
                 NumberStepper(s.count, Formats.unitLabel(s.unit, s.count), vm::setCount, 1..Interval.MAX_COUNT)
                 SegmentedControl(
                     options = IntervalUnit.entries,
                     selected = s.unit,
-                    label = { u -> Formats.unitLabel(u, 1).replaceFirstChar { it.uppercase() } },
+                    label = { u -> L.unitName(u) },
                     onSelect = vm::setUnit,
                 )
                 SectionDivider()
-                NumberStepper(s.doses, if (s.doses == 1) "time that day" else "times that day", vm::setDoses, 1..Habit.MAX_DOSES)
+                NumberStepper(s.doses, L.timesThatDay(s.doses), vm::setDoses, 1..Habit.MAX_DOSES)
             }
 
-            GroupedSection(caption = "Colour") {
+            GroupedSection(caption = L.colour) {
                 ColorSwatchPicker(s.color, vm::setColor)
             }
 
@@ -113,7 +114,7 @@ fun HabitFormScreen(
             ReminderSection(s, vm::setReminderEnabled, vm::setReminderTime, vm::setRemindDaysBefore)
 
             if (!s.isNew) {
-                PillButton("Delete habit", { vm.askDelete(true) }, Modifier.fillMaxWidth(), kind = ButtonKind.SECONDARY)
+                PillButton(L.deleteHabit, { vm.askDelete(true) }, Modifier.fillMaxWidth(), kind = ButtonKind.SECONDARY)
             }
             Spacer(Modifier.height(Space.x8))
         }
@@ -122,10 +123,10 @@ fun HabitFormScreen(
     if (s.confirmDelete) {
         AlertDialog(
             onDismissRequest = { vm.askDelete(false) },
-            title = { Text("Delete this habit?") },
-            text = { Text("Its whole history goes with it. This can't be undone.") },
-            confirmButton = { TextButton(onClick = vm::delete) { Text("Delete", color = c.danger) } },
-            dismissButton = { TextButton(onClick = { vm.askDelete(false) }) { Text("Keep it") } },
+            title = { Text(L.deleteHabitTitle) },
+            text = { Text(L.deleteHabitBody) },
+            confirmButton = { TextButton(onClick = vm::delete) { Text(L.delete, color = c.danger) } },
+            dismissButton = { TextButton(onClick = { vm.askDelete(false) }) { Text(L.keepIt) } },
         )
     }
 }

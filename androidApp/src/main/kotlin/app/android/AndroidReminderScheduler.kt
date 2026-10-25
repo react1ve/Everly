@@ -11,6 +11,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
 import app.platform.ReminderScheduler
+import app.ui.text.L
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
@@ -73,8 +74,8 @@ class AndroidReminderScheduler(
             val nm = context.getSystemService(NotificationManager::class.java) ?: return
             if (nm.getNotificationChannel(CHANNEL_ID) == null) {
                 nm.createNotificationChannel(
-                    NotificationChannel(CHANNEL_ID, "Reminders", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                        description = "When something is due"
+                    NotificationChannel(CHANNEL_ID, L.channelName, NotificationManager.IMPORTANCE_DEFAULT).apply {
+                        description = L.channelDescription
                     },
                 )
             }

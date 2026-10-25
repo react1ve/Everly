@@ -14,6 +14,8 @@ import app.data.HabitRepository
 import app.design.HabitColorKey
 import app.platform.AppClock
 import app.platform.ReminderScheduler
+import app.platform.Analytics
+import app.platform.Events
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -51,6 +53,7 @@ class HabitFormViewModel(
     private val repo: HabitRepository,
     private val clock: AppClock,
     private val reminders: ReminderScheduler,
+    private val analytics: Analytics,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HabitFormState(isNew = habitId.isEmpty(), loaded = habitId.isEmpty()))
@@ -118,7 +121,13 @@ class HabitFormViewModel(
         _state.update { it.copy(saving = true) }
         viewModelScope.launch {
             val draft = draftOf(s)
-            if (s.isNew) repo.createHabit(draft) else repo.updateHabit(habitId, draft)
+            if (s.isNew) {
+                repo.createHabit(draft)
+                analytics.track(Events.HABIT_CREATED, mapOf("unit" to s.unit.name, "doses" to s.doses.toString()))
+            } else {
+                repo.updateHabit(habitId, draft)
+            }
+            if (s.reminder.enabled && original?.reminder?.enabled != true) analytics.track(Events.REMINDER_ENABLED)
             _state.update { it.copy(saving = false, closed = true) }
         }
     }

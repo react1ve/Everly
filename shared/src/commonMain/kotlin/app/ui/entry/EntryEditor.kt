@@ -1,6 +1,7 @@
 package app.ui.entry
 
 import androidx.compose.foundation.background
+import app.ui.text.L
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -41,6 +42,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import app.core.model.Habit
 import app.data.HabitRepository
+import app.platform.Analytics
+import app.platform.Events
 import app.design.AppTheme
 import app.design.Radius
 import app.design.Sizes
@@ -77,7 +80,11 @@ data class EntryDraft(
 }
 
 /** Shared by the grid (S05 long-press) and habit detail (S08 add / edit entry). */
-class EntryEditor(private val repo: HabitRepository, private val scope: CoroutineScope) {
+class EntryEditor(
+    private val repo: HabitRepository,
+    private val scope: CoroutineScope,
+    private val analytics: Analytics,
+) {
     private val _draft = MutableStateFlow<EntryDraft?>(null)
     val draft: StateFlow<EntryDraft?> = _draft.asStateFlow()
 
@@ -103,6 +110,7 @@ class EntryEditor(private val repo: HabitRepository, private val scope: Coroutin
     fun save(edited: EntryDraft) {
         scope.launch {
             repo.setNote(edited.habit.id, edited.date, edited.note, edited.doseCount)
+            if (edited.note.isNotBlank()) analytics.track(Events.NOTE_SAVED)
             _draft.value = null
         }
     }
@@ -155,9 +163,9 @@ fun EntrySheet(initial: EntryDraft, onSave: (EntryDraft) -> Unit, onDelete: (Ent
                                 draft = draft.copy(doseCount = if (draft.done) 0 else draft.habit.dosesPerDay)
                             }
                             .semantics {
-                                contentDescription = "Done"
-                                stateDescription = if (draft.done) "checked" else
-                                    if (draft.doseCount > 0) "${draft.doseCount} of ${draft.habit.dosesPerDay}" else "not checked"
+                                contentDescription = L.doneLabel
+                                stateDescription = if (draft.done) L.checked else
+                                    if (draft.doseCount > 0) L.stPartial(draft.doseCount, draft.habit.dosesPerDay) else L.notChecked
                             },
                         contentAlignment = Alignment.Center,
                     ) {
@@ -175,7 +183,7 @@ fun EntrySheet(initial: EntryDraft, onSave: (EntryDraft) -> Unit, onDelete: (Ent
                 TextField(
                     value = draft.note,
                     onValueChange = { if (it.length <= NOTE_MAX) draft = draft.copy(note = it) },
-                    placeholder = { Text("What happened?", color = c.textMuted) },
+                    placeholder = { Text(L.whatHappened, color = c.textMuted) },
                     minLines = 3,
                     maxLines = 8,
                     textStyle = AppTheme.type.body.copy(color = c.text),
@@ -190,7 +198,7 @@ fun EntrySheet(initial: EntryDraft, onSave: (EntryDraft) -> Unit, onDelete: (Ent
                     Text("${draft.note.length} / $NOTE_MAX", style = AppTheme.type.footnote, color = c.textMuted)
                 }
                 if (initial.isExisting) {
-                    PillButton("Delete this entry", { onDelete(initial) }, Modifier.fillMaxWidth(), kind = ButtonKind.GHOST)
+                    PillButton(L.deleteEntry, { onDelete(initial) }, Modifier.fillMaxWidth(), kind = ButtonKind.GHOST)
                 }
             }
         }
@@ -210,18 +218,18 @@ fun EntrySheet(initial: EntryDraft, onSave: (EntryDraft) -> Unit, onDelete: (Ent
                         if (picked <= draft.today) draft = draft.copy(date = picked)
                     }
                     pickDate = false
-                }) { Text("OK") }
+                }) { Text(L.ok) }
             },
-            dismissButton = { TextButton(onClick = { pickDate = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { pickDate = false }) { Text(L.cancel) } },
         ) { DatePicker(state = state) }
     }
 
     if (confirmDiscard) {
         AlertDialog(
             onDismissRequest = { confirmDiscard = false },
-            title = { Text("Discard changes?") },
-            confirmButton = { TextButton(onClick = { confirmDiscard = false; onDismiss() }) { Text("Discard", color = c.danger) } },
-            dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text("Keep editing") } },
+            title = { Text(L.discardChanges) },
+            confirmButton = { TextButton(onClick = { confirmDiscard = false; onDismiss() }) { Text(L.discard, color = c.danger) } },
+            dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text(L.keepEditing) } },
         )
     }
 }

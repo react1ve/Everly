@@ -10,6 +10,7 @@ import app.core.schedule.CellState
 import app.core.schedule.ScheduleEngine
 import app.data.HabitRepository
 import app.platform.AppClock
+import app.platform.Analytics
 import app.ui.entry.EntryEditor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
@@ -46,9 +48,10 @@ class HabitDetailViewModel(
     private val habitId: String,
     private val repo: HabitRepository,
     private val clock: AppClock,
+    analytics: Analytics,
 ) : ViewModel() {
 
-    val entryEditor = EntryEditor(repo, viewModelScope)
+    val entryEditor = EntryEditor(repo, viewModelScope, analytics)
     private val year = MutableStateFlow(clock.today().year)
 
     val state: StateFlow<DetailUiState> =
@@ -82,6 +85,7 @@ class HabitDetailViewModel(
 
     fun addEntry() = entryEditor.open(habitId, clock.today(), clock.today(), dateEditable = true)
     fun editEntry(entry: Entry) = entryEditor.open(habitId, entry.date, clock.today())
+    fun deleteEntry(entry: Entry) = viewModelScope.launch { repo.deleteEntry(habitId, entry.date) }
 
     companion object {
         fun yearDays(year: Int): List<LocalDate> {

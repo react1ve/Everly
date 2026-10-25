@@ -13,6 +13,9 @@ import androidx.core.content.ContextCompat
 import app.data.HabitRepository
 import app.platform.AppClock
 import app.platform.ReminderCoordinator
+import app.platform.Analytics
+import app.platform.Events
+import app.ui.text.L
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -36,6 +39,7 @@ class ReminderReceiver : BroadcastReceiver() {
                 inBackground {
                     val koin = GlobalContext.getOrNull() ?: return@inBackground
                     koin.get<HabitRepository>().markDone(id, koin.get<AppClock>().today())
+                    koin.get<Analytics>().track(Events.NOTIFICATION_DONE)
                     reschedule()
                 }
             }
@@ -66,7 +70,7 @@ class ReminderReceiver : BroadcastReceiver() {
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setContentIntent(open)
-            .addAction(0, "Done", done)
+            .addAction(0, L.notifDone, done)
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .build()

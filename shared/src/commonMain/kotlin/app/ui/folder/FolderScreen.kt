@@ -1,6 +1,7 @@
 package app.ui.folder
 
 import androidx.compose.foundation.background
+import app.ui.text.L
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +23,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import app.data.HabitRepository
+import app.platform.Analytics
+import app.platform.Events
 import app.design.AppTheme
 import app.design.HabitColorKey
 import app.design.Radius
@@ -51,7 +54,11 @@ data class FolderFormState(
 )
 
 /** S07 Folder: name, colour, delete. [folderId] empty = new. */
-class FolderViewModel(private val folderId: String, private val repo: HabitRepository) : ViewModel() {
+class FolderViewModel(
+    private val folderId: String,
+    private val repo: HabitRepository,
+    private val analytics: Analytics,
+) : ViewModel() {
     private val _state = MutableStateFlow(FolderFormState(isNew = folderId.isEmpty(), loaded = folderId.isEmpty()))
     val state: StateFlow<FolderFormState> = _state.asStateFlow()
 
@@ -77,7 +84,7 @@ class FolderViewModel(private val folderId: String, private val repo: HabitRepos
         val s = _state.value
         if (s.name.isBlank()) return
         viewModelScope.launch {
-            if (s.isNew) repo.createFolder(s.name, s.color.name.lowercase())
+            if (s.isNew) repo.createFolder(s.name, s.color.name.lowercase()).also { analytics.track(Events.FOLDER_CREATED) }
             else repo.updateFolder(folderId, s.name, s.color.name.lowercase())
             _state.update { it.copy(closed = true) }
         }
@@ -103,7 +110,7 @@ fun FolderScreen(
 
     Column(Modifier.fillMaxSize().background(c.bg).imePadding()) {
         SheetHeader(
-            if (s.isNew) "New folder" else "Edit folder",
+            if (s.isNew) L.newFolder else L.editFolderTitle,
             onClose = onClose, onPrimary = vm::save, primaryEnabled = s.loaded && s.name.isNotBlank(),
         )
         if (!s.loaded) return@Column
@@ -114,7 +121,7 @@ fun FolderScreen(
             GroupedSection {
                 TextField(
                     value = s.name, onValueChange = vm::setName, singleLine = true,
-                    placeholder = { Text("Folder name, e.g. Pets", color = c.textMuted) },
+                    placeholder = { Text(L.folderPlaceholder, color = c.textMuted) },
                     textStyle = AppTheme.type.body.copy(color = c.text), shape = Radius.card,
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = c.surface, unfocusedContainerColor = c.surface,
@@ -123,9 +130,9 @@ fun FolderScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            GroupedSection(caption = "Colour") { ColorSwatchPicker(s.color, vm::setColor) }
+            GroupedSection(caption = L.colour) { ColorSwatchPicker(s.color, vm::setColor) }
             if (!s.isNew) {
-                PillButton("Delete folder", { vm.askDelete(true) }, Modifier.fillMaxWidth(), kind = ButtonKind.SECONDARY)
+                PillButton(L.deleteFolder, { vm.askDelete(true) }, Modifier.fillMaxWidth(), kind = ButtonKind.SECONDARY)
             }
         }
     }
@@ -133,15 +140,14 @@ fun FolderScreen(
     if (s.confirmDelete) {
         AlertDialog(
             onDismissRequest = { vm.askDelete(false) },
-            title = { Text("Delete “${s.name}”?") },
+            title = { Text(L.deleteFolderTitle(s.name)) },
             text = {
                 Text(
-                    if (s.habitCount == 0) "The folder is empty." else
-                        "Its ${s.habitCount} habit${if (s.habitCount == 1) "" else "s"} stay, without a folder. No history is lost.",
+                    if (s.habitCount == 0) L.folderEmpty else L.folderHabitsStay(s.habitCount),
                 )
             },
-            confirmButton = { TextButton(onClick = vm::delete) { Text("Delete", color = c.danger) } },
-            dismissButton = { TextButton(onClick = { vm.askDelete(false) }) { Text("Cancel") } },
+            confirmButton = { TextButton(onClick = vm::delete) { Text(L.delete, color = c.danger) } },
+            dismissButton = { TextButton(onClick = { vm.askDelete(false) }) { Text(L.cancel) } },
         )
     }
 }
