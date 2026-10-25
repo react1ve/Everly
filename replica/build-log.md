@@ -17,7 +17,13 @@ Status words: done = built + verified on device; partial = built, something miss
 | 2026-10-25 | S03 New/Edit | partial | + folder picker with "New folder…", reminder toggle/time/days-before, next reminder preview, permission warning. Still a full screen, not a sheet. | — |
 | 2026-10-25 | S05 / S08 Entry sheet | partial | One ModalBottomSheet for both: done toggle, note (2000 chars), date picker for new entries (past/today only), delete, discard confirm. Picking a date that already has an entry overwrites that day's note. | — |
 | 2026-10-25 | S07 Folder | partial | Name, colour, delete with "habits stay" confirm. | — |
-| 2026-10-25 | S04 S06 | stub | Organise and Settings are M3. | — |
+| 2026-10-25 | M2 fix | done | Missing `Modifier` import in FolderScreen.kt (fixed by Mukhammad). Added an import checker to the pre-sync routine. | — |
+| 2026-10-25 | M3 data | partial | shiftHabit / shiftFolder / moveHabit, versioned JSON backup export + import (replace, rejects bad/newer), deleteAll; 4 more repo tests (12 total). `AppSettings` for theme. | — |
+| 2026-10-25 | S04 Organise | partial | Sections per folder, ↑/↓ for habits and folders, move-to-folder menu, new/edit folder, accessibility custom actions. Drag-and-drop not built (avoided a new dependency). | — |
+| 2026-10-25 | S06 Settings | partial | Theme Auto/Light/Dark, notification status + ask, export / restore backup, delete everything, version, design catalog. Missing: battery-optimisation hint, 12/24h. | Backups need platform pickers: SAF launchers owned by MainActivity on Android; share sheet + document picker on iOS. |
+| 2026-10-25 | S09 Widget | partial | Android Glance "Today" widget: due/overdue/partial first, tap a square to check off, refreshed on every data change + every 30 min. **iOS WidgetKit not built** (needs a Swift extension target + App Group storage; next). | — |
+| 2026-10-25 | S01 Grid | partial | + now-line through today's column. | — |
+| 2026-10-25 | Android finish | partial | Notification "Done" action (markDone, idempotent) + tap opens the habit (DeepLinks); Settings rows for exact alarms + battery optimisation (SystemSettings, re-checked on resume); drag-handle reorder in Organise with haptics; haptic tick on check-off; widget sizes (small/medium/tall) + "N to do"; placeholder adaptive launcher icon; release build with R8 + resource shrinking. 13 repo tests. Not yet built on device. | Reviewer caught a wrong `zIndex` import before sync. |
 
 Deviations from architecture.md
 - Modules: `:shared:data/ui/platform` are packages inside `:shared` for now. `:core` is a separate module because the iOS widget needs to link it without Compose.

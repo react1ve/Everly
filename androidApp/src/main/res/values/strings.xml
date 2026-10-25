@@ -2,4 +2,6 @@
 <resources>
     <!-- Working title. Real name comes from /replica-brand. -->
     <string name="app_name">Recurring</string>
+    <string name="widget_name">Today</string>
+    <string name="widget_description">What\'s due today, with one-tap check-off</string>
 </resources>

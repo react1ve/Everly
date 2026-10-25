@@ -5,6 +5,9 @@ import app.data.SnapshotHabitRepository
 import app.platform.AppClock
 import app.platform.ReminderCoordinator
 import app.platform.SystemAppClock
+import app.platform.AppSettings
+import app.ui.organize.OrganizeViewModel
+import app.ui.settings.SettingsViewModel
 import app.ui.detail.HabitDetailViewModel
 import app.ui.folder.FolderViewModel
 import app.ui.grid.GridViewModel
@@ -23,14 +26,17 @@ val appModule = module {
     single<AppClock> { SystemAppClock() }
     single<Settings> { Settings() }
     single<HabitRepository> { SnapshotHabitRepository(get(), SEED_SAMPLE_DATA, get<AppClock>().today()) }
-    single { ReminderCoordinator(get(), get(), get()) } // ReminderScheduler comes from the platform module
+    single { ReminderCoordinator(get(), get(), get()) } // ReminderScheduler + BackupFiles come from the platform module
+    single { AppSettings(get()) }
     viewModel { GridViewModel(get(), get()) }
     viewModel { params -> HabitFormViewModel(params.get<String>(), get(), get(), get()) }
     viewModel { params -> HabitDetailViewModel(params.get<String>(), get(), get()) }
     viewModel { params -> FolderViewModel(params.get<String>(), get()) }
+    viewModel { OrganizeViewModel(get()) }
+    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), get(), get()) }
 }
 
-/** [platform] must register a `ReminderScheduler` (see androidApp RecurApp / iosMain MainViewController). */
+/** [platform] must register a `ReminderScheduler` and `BackupFiles` (see androidApp RecurApp / iosMain MainViewController). */
 fun initKoin(platform: KoinApplication.() -> Unit = {}) {
     if (GlobalContext.getOrNull() != null) return
     val app = startKoin {

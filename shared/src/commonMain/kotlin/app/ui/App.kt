@@ -18,7 +18,16 @@ import app.ui.detail.HabitDetailScreen
 import app.ui.folder.FolderScreen
 import app.ui.grid.GridScreen
 import app.ui.habit.HabitFormScreen
-import app.ui.stub.StubScreen
+import app.ui.organize.OrganizeScreen
+import app.ui.settings.SettingsScreen
+import app.platform.AppSettings
+import app.platform.ThemeMode
+import app.platform.DeepLinks
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import org.koin.compose.koinInject
 import kotlinx.serialization.Serializable
 
 // Routes: one per screen ID in recon.md.
@@ -33,8 +42,21 @@ import kotlinx.serialization.Serializable
 
 @Composable
 fun App() {
-    AppTheme {
+    val themeMode by koinInject<AppSettings>().theme.collectAsState()
+    val dark = when (themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+    AppTheme(dark = dark) {
         val nav = rememberNavController()
+        val linkedHabit by DeepLinks.habitId.collectAsState()
+        LaunchedEffect(linkedHabit) {
+            linkedHabit?.let { id ->
+                nav.navigate(HabitDetailRoute(id)) { launchSingleTop = true }
+                DeepLinks.consumed()
+            }
+        }
         Box(Modifier.fillMaxSize().background(AppTheme.colors.bg).windowInsetsPadding(WindowInsets.safeDrawing)) {
             NavHost(nav, startDestination = GridRoute) {
                 composable<GridRoute> {
@@ -57,12 +79,14 @@ fun App() {
                     FolderScreen(entry.toRoute<FolderRoute>().id, onClose = { nav.popBackStack() })
                 }
                 composable<OrganizeRoute> {
-                    StubScreen("S04", "Organise", "M3", onClose = { nav.popBackStack() },
-                        actions = listOf("New folder" to { nav.navigate(FolderRoute()) }))
+                    OrganizeScreen(
+                        onClose = { nav.popBackStack() },
+                        onNewFolder = { nav.navigate(FolderRoute()) },
+                        onEditFolder = { nav.navigate(FolderRoute(it)) },
+                    )
                 }
                 composable<SettingsRoute> {
-                    StubScreen("S06", "Settings", "M3", onClose = { nav.popBackStack() },
-                        actions = listOf("Design catalog" to { nav.navigate(CatalogRoute) }))
+                    SettingsScreen(onClose = { nav.popBackStack() }, onCatalog = { nav.navigate(CatalogRoute) })
                 }
                 composable<CatalogRoute> { DesignCatalogScreen(onClose = { nav.popBackStack() }) }
             }

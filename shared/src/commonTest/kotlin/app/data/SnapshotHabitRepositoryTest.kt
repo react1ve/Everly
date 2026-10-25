@@ -84,4 +84,55 @@ class SnapshotHabitRepositoryTest {
         repo.deleteEntry(id, today)
         assertEquals(listOf("b"), repo.entries.first().map { it.note })
     }
+
+    @Test fun shiftAndMoveKeepGroupsInOrder() = runTest {
+        val repo = SnapshotHabitRepository(MapSettings(), seedIfEmpty = false, today = today)
+        val a = repo.createHabit(draft().copy(name = "a"))
+        val b = repo.createHabit(draft().copy(name = "b"))
+        val c = repo.createHabit(draft().copy(name = "c"))
+        repo.shiftHabit(c, -1)
+        assertEquals(listOf("a", "c", "b"), repo.habits.first().map { it.name })
+        repo.shiftHabit(a, -1) // already first: no-op
+        assertEquals(listOf("a", "c", "b"), repo.habits.first().map { it.name })
+        val f = repo.createFolder("F", "teal")
+        repo.moveHabit(a, f)
+        assertEquals(f, repo.habit(a)!!.folderId)
+    }
+
+    @Test fun backupRoundTripReplacesEverything() = runTest {
+        val source = SnapshotHabitRepository(MapSettings(), seedIfEmpty = true, today = today)
+        val json = source.exportBackup()
+        val target = SnapshotHabitRepository(MapSettings(), seedIfEmpty = false, today = today)
+        target.createHabit(draft().copy(name = "will be replaced"))
+        val summary = target.importBackup(json)
+        assertEquals(source.habits.first(), target.habits.first())
+        assertEquals(source.entries.first().toSet(), target.entries.first().toSet())
+        assertEquals(source.habits.first().size, summary.habits)
+    }
+
+    @Test fun badBackupIsRejectedAndChangesNothing() = runTest {
+        val repo = SnapshotHabitRepository(MapSettings(), seedIfEmpty = false, today = today)
+        repo.createHabit(draft())
+        kotlin.test.assertFailsWith<BackupFormatException> { repo.importBackup("{ not json") }
+        kotlin.test.assertFailsWith<BackupFormatException> { repo.importBackup("""{"schemaVersion": 99}""") }
+        assertEquals(1, repo.habits.first().size)
+    }
+
+    @Test fun deleteAllEmptiesTheApp() = runTest {
+        val repo = SnapshotHabitRepository(MapSettings(), seedIfEmpty = true, today = today)
+        repo.deleteAll()
+        assertTrue(repo.habits.first().isEmpty())
+        assertTrue(repo.entries.first().isEmpty())
+    }
+
+    @Test fun markDoneIsIdempotentAndKeepsTheNote() = runTest {
+        val repo = SnapshotHabitRepository(MapSettings(), seedIfEmpty = false, today = today)
+        val id = repo.createHabit(draft(doses = 3))
+        repo.setNote(id, today, "half way", 1)
+        repo.markDone(id, today)
+        repo.markDone(id, today)
+        val e = repo.entries.first().single()
+        assertEquals(3, e.doseCount)
+        assertEquals("half way", e.note)
+    }
 }

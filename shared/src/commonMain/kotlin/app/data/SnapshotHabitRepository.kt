@@ -100,6 +100,12 @@ class SnapshotHabitRepository(
         s.copy(entries = updated) to Unit
     }
 
+    override suspend fun markDone(habitId: String, date: LocalDate) = mutate { s ->
+        val habit = s.habits.firstOrNull { it.id == habitId } ?: return@mutate s to Unit
+        val key = EntryKey(habitId, date)
+        s.copy(entries = s.entries + (key to Entry(habitId, date, habit.dosesPerDay, s.entries[key]?.note))) to Unit
+    }
+
     override suspend fun deleteEntry(habitId: String, date: LocalDate) = mutate { s ->
         s.copy(entries = s.entries - EntryKey(habitId, date)) to Unit
     }
@@ -127,7 +133,59 @@ class SnapshotHabitRepository(
         s.copy(folders = s.folders.map { if (it.id == id) it.copy(collapsed = collapsed) else it }) to Unit
     }
 
+    override suspend fun moveHabit(habitId: String, folderId: String?) = mutate { s ->
+        val last = s.habits.filter { it.folderId == folderId }.maxOfOrNull { it.sortOrder } ?: -1
+        s.copy(habits = s.habits.map { if (it.id == habitId) it.copy(folderId = folderId, sortOrder = last + 1) else it }) to Unit
+    }
+
+    override suspend fun shiftHabit(habitId: String, delta: Int) = mutate { s ->
+        val h = s.habits.firstOrNull { it.id == habitId } ?: return@mutate s to Unit
+        val group = s.habits.filter { it.folderId == h.folderId }.sortedBy { it.sortOrder }
+        val i = group.indexOfFirst { it.id == habitId }
+        val other = group.getOrNull(i + delta) ?: return@mutate s to Unit
+        s.copy(habits = s.habits.map {
+            when (it.id) {
+                h.id -> it.copy(sortOrder = other.sortOrder)
+                other.id -> it.copy(sortOrder = h.sortOrder)
+                else -> it
+            }
+        }.normalised()) to Unit
+    }
+
+    override suspend fun shiftFolder(folderId: String, delta: Int) = mutate { s ->
+        val sorted = s.folders.sortedBy { it.sortOrder }
+        val i = sorted.indexOfFirst { it.id == folderId }
+        val j = i + delta
+        if (i < 0 || j !in sorted.indices) return@mutate s to Unit
+        val reordered = sorted.toMutableList().apply { add(j, removeAt(i)) }
+        s.copy(folders = reordered.mapIndexed { idx, f -> f.copy(sortOrder = idx) }) to Unit
+    }
+
+    override suspend fun exportBackup(): String = json.encodeToString(SnapshotDto.serializer(), state.value.toDto())
+
+    override suspend fun importBackup(json: String): BackupSummary {
+        val parsed = try {
+            this.json.decodeFromString(SnapshotDto.serializer(), json).also {
+                if (it.schemaVersion > SnapshotDto.CURRENT_VERSION) {
+                    throw BackupFormatException("This backup was made by a newer version of the app.")
+                }
+            }.toDomain()
+        } catch (e: BackupFormatException) {
+            throw e
+        } catch (e: Exception) {
+            throw BackupFormatException("That file isn't a backup from this app.", e)
+        }
+        mutate { parsed to Unit }
+        return BackupSummary(parsed.habits.size, parsed.folders.size, parsed.entries.size)
+    }
+
+    override suspend fun deleteAll() = mutate { Snapshot() to Unit }
+
     // --- internals ---
+
+    /** Sort orders stay 0..n-1 after swaps, so equal values can't creep in. */
+    private fun List<Habit>.normalised(): List<Habit> =
+        sortedBy { it.sortOrder }.mapIndexed { i, h -> h.copy(sortOrder = i) }
 
     private suspend fun <T> mutate(block: (Snapshot) -> Pair<Snapshot, T>): T = mutex.withLock {
         val (next, result) = block(state.value)
@@ -164,11 +222,13 @@ internal data class Snapshot(
 
 @Serializable
 internal data class SnapshotDto(
-    val schemaVersion: Int = 1,
+    val schemaVersion: Int = CURRENT_VERSION,
     val habits: List<HabitDto> = emptyList(),
     val folders: List<FolderDto> = emptyList(),
     val entries: List<EntryDto> = emptyList(),
-)
+) {
+    companion object { const val CURRENT_VERSION = 1 }
+}
 
 @Serializable
 internal data class HabitDto(

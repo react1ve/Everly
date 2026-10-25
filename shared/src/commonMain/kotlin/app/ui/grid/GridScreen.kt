@@ -50,6 +50,8 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -143,6 +145,19 @@ private fun GridContent(
         val lastVisible = ceil((offset + stripWidthPx) / colPx).toInt() - 1
         val todayVisible = s.todayIndex in firstVisible..lastVisible
         val leftmostDay = s.days.getOrElse(firstVisible.coerceIn(0, s.days.lastIndex)) { s.today }
+
+        // Now-line: drawn first so it sits behind the cells and shows in the gaps.
+        if (todayVisible) {
+            val headerPx = with(density) { (Sizes.gridRow + Space.x2).toPx() }
+            val habitColPx = with(density) { Sizes.habitColumn.toPx() }
+            Box(
+                Modifier
+                    .offset { IntOffset((habitColPx + s.todayIndex * colPx - offset + colPx / 2).roundToInt(), headerPx.roundToInt()) }
+                    .width(Sizes.edge)
+                    .fillMaxHeight()
+                    .background(AppTheme.colors.accent.copy(alpha = 0.5f)),
+            )
+        }
 
         Column(Modifier.fillMaxSize().scrollable(scrollState, Orientation.Horizontal)) {
             HeaderRow(s, leftmostDay, offset = { offset })
@@ -238,6 +253,7 @@ private fun HabitRow(
     val c = AppTheme.colors
     val hc = habitColors(row.habit.colorKey)
     val folderBar = row.folderColorKey?.let { habitColors(it).fill }
+    val haptics = LocalHapticFeedback.current
     Row(Modifier.fillMaxWidth().height(Sizes.gridRow), verticalAlignment = Alignment.CenterVertically) {
         // pinned name column; habits in a folder get a bar in the folder's colour
         Box(Modifier.width(Space.x1).fillMaxHeight().padding(vertical = Space.x1).background(folderBar ?: c.bg))
@@ -261,8 +277,18 @@ private fun HabitRow(
                 cell = cell,
                 colors = hc,
                 habitName = row.habit.name,
-                onTap = { if (cell.isTappable) onToggle(row.habit.id, cell.date) },
-                onLongPress = { if (cell.isTappable) onDayNote(row.habit.id, cell.date) },
+                onTap = {
+                    if (cell.isTappable) {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onToggle(row.habit.id, cell.date)
+                    }
+                },
+                onLongPress = {
+                    if (cell.isTappable) {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onDayNote(row.habit.id, cell.date)
+                    }
+                },
             )
         }
     }

@@ -38,6 +38,8 @@ interface HabitRepository {
     suspend fun toggleDay(habitId: String, date: LocalDate): Int
     /** Upsert one day: dose count + note. Removes the row when both are empty. */
     suspend fun setNote(habitId: String, date: LocalDate, note: String?, doseCount: Int)
+    /** Sets the day to fully done (all doses), keeping any note. Idempotent — safe for notification actions. */
+    suspend fun markDone(habitId: String, date: LocalDate)
     suspend fun deleteEntry(habitId: String, date: LocalDate)
 
     suspend fun folder(id: String): Folder?
@@ -46,4 +48,19 @@ interface HabitRepository {
     /** Habits in the folder fall back to "no folder"; nothing else is deleted. */
     suspend fun deleteFolder(id: String)
     suspend fun setFolderCollapsed(id: String, collapsed: Boolean)
+
+    /** Moves a habit to another folder (null = none), at the end of that group. */
+    suspend fun moveHabit(habitId: String, folderId: String?)
+    /** Swaps with the neighbour in the same group: -1 = up, +1 = down. */
+    suspend fun shiftHabit(habitId: String, delta: Int)
+    suspend fun shiftFolder(folderId: String, delta: Int)
+
+    /** The whole dataset as a versioned JSON backup. */
+    suspend fun exportBackup(): String
+    /** Replaces everything with the backup. Throws [BackupFormatException] if it can't be read. */
+    suspend fun importBackup(json: String): BackupSummary
+    suspend fun deleteAll()
 }
+
+data class BackupSummary(val habits: Int, val folders: Int, val entries: Int)
+class BackupFormatException(message: String, cause: Throwable? = null) : Exception(message, cause)

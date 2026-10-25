@@ -22,19 +22,19 @@ Remind N days before the due day,reminders,must,yes,partial,"S03 ""2 days before
 Reminders only on due days; rescheduled on check-off,reminders,must,yes,partial,local notifications; survive reboot; ReminderCoordinator; Android AlarmManager + boot/time receivers; iOS UNUserNotificationCenter (no background top-up yet)
 Next reminder preview in the form,reminders,should,yes,partial,S03; S03 + S02
 Bell on next reminder day in grid / dot in year view,grid,should,yes,partial,2026.5 release notes; grid bell only; reminders not scheduled yet
-Current-time line through today,grid,should,yes,no,2026.5 release notes
+Current-time line through today,grid,should,yes,partial,2026.5 release notes; day-level line through today's column (no time-of-day position)
 Tomorrow highlighted for dailies after today is checked,grid,should,yes,partial,2026.5 release notes; falls out of the engine rules; tested
-Organize screen: drag to reorder habits,folders,should,yes,no,S04
-Move habit to folder (and create folder inline),folders,should,yes,partial,S03 / S04; folder picker in S03; Organize drag still M3
-Interactive home-screen widget (check off from widget),widgets,should,yes,no,Glance on Android; WidgetKit (Swift) on iOS
-Lock-screen widget,widgets,should,yes,no,iOS only; Android has no equivalent - skip there
-Export backup to file,data,should,yes,no,Settings; FAQ
-Import backup,data,should,unknown,no,needed to make export useful on a new device
-Settings: notifications permission + status,settings,should,yes,no,FAQ
-Colour themes / dark mode,settings,should,yes,no,listing mentions colour themes
+Organize screen: drag to reorder habits,folders,should,yes,partial,S04; S04 with up/down buttons + accessibility actions; drag handle reorder built
+Move habit to folder (and create folder inline),folders,should,yes,partial,S03 / S04; folder picker in S03; Organize drag still M3; also from S04 per-row menu
+Interactive home-screen widget (check off from widget),widgets,should,yes,partial,Glance on Android; WidgetKit (Swift) on iOS; Android Glance 'Today' widget with tap-to-check; iOS WidgetKit not yet; responsive small/medium/tall
+Lock-screen widget,widgets,should,yes,no,iOS only; Android has no equivalent - skip there; no Android equivalent; iOS only
+Export backup to file,data,should,yes,partial,"Settings; FAQ; Settings: SAF on Android, share sheet on iOS; versioned JSON"
+Import backup,data,should,unknown,partial,needed to make export useful on a new device; replace-all with confirm; rejects bad or newer files
+Settings: notifications permission + status,settings,should,yes,partial,FAQ; S06; Android: exact-alarm + battery optimisation rows
+Colour themes / dark mode,settings,should,yes,partial,listing mentions colour themes; Auto/Light/Dark in Settings; dark palette from tokens
 Localization (EN DE RU ZH),settings,could,yes,no,add UZ for home market
 Cross-device sync (replacement for iCloud),data,could,yes,no,decide in replica-architect; makes size L
-Mark done from the notification,reminders,could,unknown,no,not confirmed in original
+Mark done from the notification,reminders,could,unknown,partial,not confirmed in original; Android: Done action on the notification; iOS later
 Check off from a note sheet,notes,could,yes,no,2026.5 release notes
 Delete entries from context menu,history,could,yes,partial,Mac in original; long-press menu on mobile; delete from the entry sheet instead
 Anonymous usage analytics,analytics,could,yes,no,original uses TelemetryDeck; pick a privacy-friendly option

@@ -12,6 +12,7 @@ navigationCompose = "2.9.0"
 lifecycleKmp = "2.9.0"
 activityCompose = "1.13.0"
 coreKtx = "1.19.0"
+glance = "1.1.1"
 kermit = "2.0.4"
 
 [libraries]
@@ -30,6 +31,7 @@ multiplatform-settings-test = { module = "com.russhwolf:multiplatform-settings-t
 navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 lifecycle-runtime-compose-kmp = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycleKmp" }
 lifecycle-viewmodel-compose-kmp = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleKmp" }
+androidx-glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "glance" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
